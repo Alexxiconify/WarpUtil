@@ -9,38 +9,28 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.command.PluginCommand; // Import PluginCommand
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull; // Added for @NotNull annotations
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collections; // Added for sorting
+import java.util.Collections;
 import java.util.List;
-import java.util.Objects; // Added for Objects.requireNonNull
 import java.util.stream.Collectors;
+// Changed from import java.util.Objects; to avoid ambiguity if Object is needed
 
-@SuppressWarnings("ALL") // Keeping this annotation if the user prefers it
-public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, TabCompleter { // Changed class name for consistency
+
+@SuppressWarnings("ALL")
+public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
  @Override
  public void onEnable() {
-  // Save the default config.yml if it doesn't exist.
-  // This ensures the 'warps' section is available from the start.
   saveDefaultConfig();
 
-  // Register commands and their executors/tab completers
-  // Using Objects.requireNonNull to ensure commands are properly registered
-  Objects.requireNonNull(getCommand("warp")).setExecutor(this);
-  Objects.requireNonNull(getCommand("warp")).setTabCompleter(this);
-
-  Objects.requireNonNull(getCommand("setwarp")).setExecutor(this);
-  Objects.requireNonNull(getCommand("setwarp")).setTabCompleter(this);
-
-  Objects.requireNonNull(getCommand("delwarp")).setExecutor(this);
-  Objects.requireNonNull(getCommand("delwarp")).setTabCompleter(this);
-
-  Objects.requireNonNull(getCommand("warps")).setExecutor(this);
+  // Register commands programmatically
+  registerCommands();
 
   getLogger().info("NestedWarps plugin enabled!");
  }
@@ -50,188 +40,66 @@ public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, Ta
   getLogger().info("NestedWarps plugin disabled!");
  }
 
- @Override
- public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-  // Handle the /warp command
-  if (command.getName().equalsIgnoreCase("warp")) {
-   if (!(sender instanceof Player player)) { // Modern Java pattern matching for instanceof
-    sender.sendMessage(ChatColor.RED + "Only players can use the /warp command.");
-    return true;
-   }
+ /**
+  * Programmatically registers all commands for this plugin.
+  * This method is called during onEnable().
+  */
+ private void registerCommands() {
+  // Create and register PluginCommand instances
+  // For each command, we create a new instance of an inner class that
+  // implements CommandExecutor and TabCompleter.
+  // This is PaperMC's recommended way for newer versions.
 
-   if (args.length == 0) {
-    // Show usage or list available warps if no arguments are provided
-    player.sendMessage(ChatColor.YELLOW + "Usage: /warp <warp_name>");
-    player.sendMessage(ChatColor.YELLOW + "Example: /warp creative/build1 or /warp hub");
-    player.sendMessage(ChatColor.YELLOW + "Use /warps to see all available warps.");
-    return true;
-   }
-
-   String warpPath = String.join("/", args); // Joins arguments to form the full path
-
-   // Check for general warp permission or specific warp permission
-   if (!player.hasPermission("nestedwarps.warp." + warpPath.replace("/", ".")) && !player.hasPermission("nestedwarps.warp")) {
-    player.sendMessage(ChatColor.RED + "You do not have permission to warp to " + warpPath + ".");
-    return true;
-   }
-
-   Location warpLocation = getWarpLocation(warpPath);
-   if (warpLocation != null) {
-    player.teleport(warpLocation);
-    player.sendMessage(ChatColor.GREEN + "Teleported to warp: " + ChatColor.GOLD + warpPath);
-   } else {
-    player.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
-   }
-   return true;
+  // /warp command
+  PluginCommand warpCommand = getServer().getPluginCommand("warp");
+  if (warpCommand != null) {
+   warpCommand.setExecutor(new WarpCommandExecutor());
+   warpCommand.setTabCompleter(new WarpTabCompleter());
+   warpCommand.setDescription("Teleports to a warp (e.g., /warp creative/build1).");
+   warpCommand.setUsage("/<command> [warp_name]");
+   warpCommand.setPermission("nestedwarps.warp");
+   warpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to use this command.");
+  } else {
+   getLogger().severe("Command 'warp' could not be found for registration. Is it defined in plugin.yml (even though Paper plugins don't fully support it)?");
   }
 
-  // Handle the /setwarp command
-  if (command.getName().equalsIgnoreCase("setwarp")) {
-   if (!(sender instanceof Player player)) { // Modern Java pattern matching for instanceof
-    sender.sendMessage(ChatColor.RED + "Only players can use the /setwarp command.");
-    return true;
-   }
-
-   if (!player.hasPermission("nestedwarps.setwarp")) {
-    player.sendMessage(ChatColor.RED + "You do not have permission to set warps.");
-    return true;
-   }
-
-   if (args.length == 0) {
-    player.sendMessage(ChatColor.YELLOW + "Usage: /setwarp <warp_name>");
-    player.sendMessage(ChatColor.YELLOW + "Example: /setwarp creative/build1 or /setwarp hub");
-    return true;
-   }
-
-   String warpPath = String.join("/", args);
-   saveWarpLocation(warpPath, player.getLocation());
-   player.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' set successfully!");
-   return true;
+  // /setwarp command
+  PluginCommand setWarpCommand = getServer().getPluginCommand("setwarp");
+  if (setWarpCommand != null) {
+   setWarpCommand.setExecutor(new SetWarpCommandExecutor());
+   setWarpCommand.setTabCompleter(new SetWarpTabCompleter()); // Optional: for tab completion of existing names
+   setWarpCommand.setDescription("Sets a new warp at your current location (e.g., /setwarp creative/build1).");
+   setWarpCommand.setUsage("/<command> <warp_name>");
+   setWarpCommand.setPermission("nestedwarps.setwarp");
+   setWarpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to set warps.");
+  } else {
+   getLogger().severe("Command 'setwarp' could not be found for registration.");
   }
 
-  // Handle the /delwarp command
-  if (command.getName().equalsIgnoreCase("delwarp")) {
-   if (!sender.hasPermission("nestedwarps.delwarp")) {
-    sender.sendMessage(ChatColor.RED + "You do not have permission to delete warps.");
-    return true;
-   }
-
-   if (args.length == 0) {
-    sender.sendMessage(ChatColor.YELLOW + "Usage: /delwarp <warp_name>");
-    sender.sendMessage(ChatColor.YELLOW + "Example: /delwarp creative/build1 or /delwarp hub");
-    return true;
-   }
-
-   String warpPath = String.join("/", args);
-   if (deleteWarpLocation(warpPath)) {
-    sender.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' deleted successfully!");
-   } else {
-    sender.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
-   }
-   return true;
+  // /delwarp command
+  PluginCommand delWarpCommand = getServer().getPluginCommand("delwarp");
+  if (delWarpCommand != null) {
+   delWarpCommand.setExecutor(new DelWarpCommandExecutor());
+   delWarpCommand.setTabCompleter(new DelWarpTabCompleter());
+   delWarpCommand.setDescription("Deletes an existing warp (e.g., /delwarp creative/build1).");
+   delWarpCommand.setUsage("/<command> <warp_name>");
+   delWarpCommand.setPermission("nestedwarps.delwarp");
+   delWarpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to delete warps.");
+  } else {
+   getLogger().severe("Command 'delwarp' could not be found for registration.");
   }
 
-  // Handle the /warps command
-  if (command.getName().equalsIgnoreCase("warps")) {
-   if (!sender.hasPermission("nestedwarps.list")) {
-    sender.sendMessage(ChatColor.RED + "You do not have permission to list warps.");
-    return true;
-   }
-
-   List<String> allWarps = getAllWarpPathsRecursive(getConfig().getConfigurationSection("warps"), "");
-
-   if (allWarps.isEmpty()) {
-    sender.sendMessage(ChatColor.YELLOW + "No warps have been set yet.");
-   } else {
-    sender.sendMessage(ChatColor.AQUA + "--- Available Warps ---");
-    // Sort warps alphabetically for cleaner display
-    Collections.sort(allWarps);
-    for (String warp : allWarps) {
-     sender.sendMessage(ChatColor.GRAY + "- " + warp);
-    }
-    sender.sendMessage(ChatColor.AQUA + "---------------------");
-   }
-   return true;
+  // /warps command
+  PluginCommand warpsCommand = getServer().getPluginCommand("warps");
+  if (warpsCommand != null) {
+   warpsCommand.setExecutor(new WarpsCommandExecutor());
+   warpsCommand.setDescription("Lists all available warps.");
+   warpsCommand.setUsage("/<command>");
+   warpsCommand.setPermission("nestedwarps.list");
+   warpsCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to list warps.");
+  } else {
+   getLogger().severe("Command 'warps' could not be found for registration.");
   }
-
-  return false; // Command not recognized by this executor
- }
-
- @Override
- public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-  // Only provide tab completion if the sender has permission for at least one relevant command
-  if (!sender.hasPermission("nestedwarps.warp") &&
-          !sender.hasPermission("nestedwarps.delwarp") &&
-          !sender.hasPermission("nestedwarps.setwarp")) {
-   return Collections.emptyList();
-  }
-
-  String commandName = command.getName().toLowerCase();
-  List<String> completions = new ArrayList<>();
-  ConfigurationSection warpsSection = getConfig().getConfigurationSection("warps");
-
-  if (warpsSection == null) {
-   return Collections.emptyList();
-  }
-
-  // Determine the current argument the user is typing for completion
-  String currentInputPart = args[args.length - 1].toLowerCase();
-
-  // Build the path to the current configuration section based on previous arguments
-  ConfigurationSection sectionToSearch = warpsSection;
-  // The loop goes up to args.length - 1 because the last arg is currentInputPart
-  for (int i = 0; i < args.length - 1; i++) {
-   if (sectionToSearch == null) break; // Previous part was not a valid section
-   sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
-  }
-
-  if (sectionToSearch == null) {
-   return Collections.emptyList(); // The preceding path is not a valid folder or section
-  }
-
-  // --- Logic for /warp and /delwarp tab completion ---
-  if (commandName.equals("warp") || commandName.equals("delwarp")) {
-   for (String key : sectionToSearch.getKeys(false)) { // false for direct children only
-    // Check if the key starts with the current typed part (case-insensitive)
-    if (key.toLowerCase().startsWith(currentInputPart)) {
-     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
-
-     if (childSection != null) { // This 'key' represents a ConfigurationSection (potential warp or folder)
-      // Check if this section represents a valid warp (contains location data)
-      boolean isActualWarp = childSection.contains("world") && childSection.contains("x") &&
-              childSection.contains("y") && childSection.contains("z");
-
-      // Add the warp name if it's an actual warp
-      if (isActualWarp) {
-       completions.add(key);
-      }
-
-      // If the section has any direct children (meaning it's a folder, possibly also a warp)
-      // then suggest it with a trailing slash to allow drilling down.
-      if (childSection.getKeys(false).size() > 0) {
-       completions.add(key + "/");
-      }
-     }
-     // If childSection is null, it means 'key' points to a primitive value (like "world", "x", etc.)
-     // within the current section. These are not valid warp names or folder names for tab completion,
-     // so we don't add them.
-    }
-   }
-  }
-  // --- Logic for /setwarp tab completion ---
-  else if (commandName.equals("setwarp")) {
-   // For /setwarp, we suggest all current full warp paths. This is useful for overwriting existing warps,
-   // or providing a template for new nested warp names.
-   List<String> allExistingWarpPaths = getAllWarpPathsRecursive(warpsSection, "");
-   for (String existingWarp : allExistingWarpPaths) {
-    if (existingWarp.toLowerCase().startsWith(currentInputPart)) {
-     completions.add(existingWarp);
-    }
-   }
-  }
-
-  // Ensure unique completions before returning
-  return completions.stream().distinct().collect(Collectors.toList());
  }
 
 
@@ -242,7 +110,7 @@ public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, Ta
   * @param warpPath The path to the warp (e.g., "hub" or "creative/build1").
   * @return The Location object if found, null otherwise.
   */
- private Location getWarpLocation(String warpPath) {
+ private @Nullable Location getWarpLocation(String warpPath) {
   ConfigurationSection warpsSection = getConfig().getConfigurationSection("warps");
   if (warpsSection == null) return null;
 
@@ -286,7 +154,7 @@ public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, Ta
   * @param warpPath The path to the warp.
   * @param location The Location object to save.
   */
- private void saveWarpLocation(String warpPath, @NotNull Location location) { // Added @NotNull
+ private void saveWarpLocation(String warpPath, @NotNull Location location) {
   // Replace '/' with '.' for navigating config sections, as Bukkit config uses dots for nesting
   String configPath = "warps." + warpPath.replace("/", ".");
 
@@ -324,7 +192,7 @@ public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, Ta
   * @param currentPath The path built so far (e.g., "creative").
   * @return A list of full warp paths.
   */
- private List<String> getAllWarpPathsRecursive(ConfigurationSection section, String currentPath) {
+ private @NotNull List<String> getAllWarpPathsRecursive(@Nullable ConfigurationSection section, String currentPath) {
   List<String> warpPaths = new ArrayList<>();
   if (section == null) return warpPaths;
 
@@ -347,5 +215,240 @@ public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, Ta
    // so we do not add them to the list of warpPaths.
   }
   return warpPaths;
+ }
+
+ /**
+  * Inner class for /warp command logic.
+  */
+ private class WarpCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can use the /warp command.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    player.sendMessage(ChatColor.YELLOW + "Usage: /warp <warp_name>");
+    player.sendMessage(ChatColor.YELLOW + "Example: /warp creative/build1 or /warp hub");
+    player.sendMessage(ChatColor.YELLOW + "Use /warps to see all available warps.");
+    return true;
+   }
+
+   String warpPath = String.join("/", args);
+
+   if (!player.hasPermission("nestedwarps.warp." + warpPath.replace("/", ".")) && !player.hasPermission("nestedwarps.warp")) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to warp to " + warpPath + ".");
+    return true;
+   }
+
+   Location warpLocation = getWarpLocation(warpPath);
+   if (warpLocation != null) {
+    player.teleport(warpLocation);
+    player.sendMessage(ChatColor.GREEN + "Teleported to warp: " + ChatColor.GOLD + warpPath);
+   } else {
+    player.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
+   }
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /warp tab completion logic.
+  */
+ private class WarpTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!sender.hasPermission("nestedwarps.warp")) {
+    return Collections.emptyList();
+   }
+
+   List<String> completions = new ArrayList<>();
+   ConfigurationSection warpsSection = getConfig().getConfigurationSection("warps");
+   if (warpsSection == null) return Collections.emptyList();
+
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   ConfigurationSection sectionToSearch = warpsSection;
+   for (int i = 0; i < args.length - 1; i++) {
+    if (sectionToSearch == null) break;
+    sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
+   }
+
+   if (sectionToSearch == null) return Collections.emptyList();
+
+   for (String key : sectionToSearch.getKeys(false)) {
+    if (key.toLowerCase().startsWith(currentInputPart)) {
+     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+     if (childSection != null) {
+      boolean isActualWarp = childSection.contains("world") && childSection.contains("x") &&
+              childSection.contains("y") && childSection.contains("z");
+
+      if (isActualWarp) {
+       completions.add(key);
+      }
+
+      if (childSection.getKeys(false).size() > 0) { // Check if it has any children keys
+       completions.add(key + "/");
+      }
+     }
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+ /**
+  * Inner class for /setwarp command logic.
+  */
+ private class SetWarpCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can use the /setwarp command.");
+    return true;
+   }
+
+   if (!player.hasPermission("nestedwarps.setwarp")) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to set warps.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    player.sendMessage(ChatColor.YELLOW + "Usage: /setwarp <warp_name>");
+    player.sendMessage(ChatColor.YELLOW + "Example: /setwarp creative/build1 or /setwarp hub");
+    return true;
+   }
+
+   String warpPath = String.join("/", args);
+   saveWarpLocation(warpPath, player.getLocation());
+   player.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' set successfully!");
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /setwarp tab completion logic.
+  */
+ private class SetWarpTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!sender.hasPermission("nestedwarps.setwarp")) {
+    return Collections.emptyList();
+   }
+
+   if (args.length == 0) return Collections.emptyList();
+
+   List<String> completions = new ArrayList<>();
+   List<String> allExistingWarpPaths = getAllWarpPathsRecursive(getConfig().getConfigurationSection("warps"), "");
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   for (String existingWarp : allExistingWarpPaths) {
+    if (existingWarp.toLowerCase().startsWith(currentInputPart)) {
+     completions.add(existingWarp);
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+ /**
+  * Inner class for /delwarp command logic.
+  */
+ private class DelWarpCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!sender.hasPermission("nestedwarps.delwarp")) {
+    sender.sendMessage(ChatColor.RED + "You do not have permission to delete warps.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    sender.sendMessage(ChatColor.YELLOW + "Usage: /delwarp <warp_name>");
+    sender.sendMessage(ChatColor.YELLOW + "Example: /delwarp creative/build1 or /delwarp hub");
+    return true;
+   }
+
+   String warpPath = String.join("/", args);
+   if (deleteWarpLocation(warpPath)) {
+    sender.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' deleted successfully!");
+   } else {
+    sender.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
+   }
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /delwarp tab completion logic.
+  */
+ private class DelWarpTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!sender.hasPermission("nestedwarps.delwarp")) {
+    return Collections.emptyList();
+   }
+
+   List<String> completions = new ArrayList<>();
+   ConfigurationSection warpsSection = getConfig().getConfigurationSection("warps");
+   if (warpsSection == null) return Collections.emptyList();
+
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   ConfigurationSection sectionToSearch = warpsSection;
+   for (int i = 0; i < args.length - 1; i++) {
+    if (sectionToSearch == null) break;
+    sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
+   }
+
+   if (sectionToSearch == null) return Collections.emptyList();
+
+   for (String key : sectionToSearch.getKeys(false)) {
+    if (key.toLowerCase().startsWith(currentInputPart)) {
+     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+     if (childSection != null) {
+      boolean isActualWarp = childSection.contains("world") && childSection.contains("x") &&
+              childSection.contains("y") && childSection.contains("z");
+
+      if (isActualWarp) {
+       completions.add(key);
+      }
+
+      if (childSection.getKeys(false).size() > 0) {
+       completions.add(key + "/");
+      }
+     }
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+
+ /**
+  * Inner class for /warps command logic.
+  */
+ private class WarpsCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!sender.hasPermission("nestedwarps.list")) {
+    sender.sendMessage(ChatColor.RED + "You do not have permission to list warps.");
+    return true;
+   }
+
+   List<String> allWarps = getAllWarpPathsRecursive(getConfig().getConfigurationSection("warps"), "");
+
+   if (allWarps.isEmpty()) {
+    sender.sendMessage(ChatColor.YELLOW + "No warps have been set yet.");
+   } else {
+    sender.sendMessage(ChatColor.AQUA + "--- Available Warps ---");
+    Collections.sort(allWarps);
+    for (String warp : allWarps) {
+     sender.sendMessage(ChatColor.GRAY + "- " + warp);
+    }
+    sender.sendMessage(ChatColor.AQUA + "---------------------");
+   }
+   return true;
+  }
  }
 }
