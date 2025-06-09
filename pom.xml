@@ -10,11 +10,9 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source> <!-- Recommended Java version for modern Minecraft -->
-        <maven.compiler.target>17</maven.compiler.target> <!-- Recommended Java version for modern Minecraft -->
+        <maven.compiler.source>21</maven.compiler.source> <!-- Updated to Java 21 -->
+        <maven.compiler.target>21</maven.compiler.target> <!-- Updated to Java 21 -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.home.path>C:/Program Files/Java/jdk-17</java.home.path> <!-- IMPORTANT: Set this to your JDK 17 installation path -->
-        <!-- Ensure this path is correct for your system -->
     </properties>
 
     <repositories>
@@ -59,24 +57,23 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <!-- Explicitly set the Java executable to avoid 'system modules path not set' warning -->
-                    <executable>${java.home.path}/bin/javac</executable>
+                    <!--suppress UnresolvedMavenProperty -->
+                    <executable>${java.home}/bin/javac</executable> <!-- Corrected property to java.home -->
                 </configuration>
             </plugin>
-            <!-- Maven Jar Plugin: Creates the initial JAR with a classifier -->
+            <!-- Maven Jar Plugin: Creates the initial JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
-                <configuration>
-                    <!-- Give the initial JAR a different classifier to avoid conflict with the shaded JAR -->
-                    <classifier>original</classifier>
-                </configuration>
+                <!-- Removed the <configuration> with <classifier>original</classifier>
+                     to ensure the default main artifact is produced for shading. -->
             </plugin>
             <!-- Maven Shade Plugin: To bundle external libraries and create the final plugin JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.5.2</version> <!-- Updated to a newer version for Java 21 compatibility -->
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -85,8 +82,7 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <!-- This will be the final JAR name that you deploy -->
-                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}.jar</outputFile>
+
                             <artifactSet>
                                 <includes>
                                     <!-- This tells shade to include your own plugin classes and annotations,
@@ -100,6 +96,17 @@
                                     <exclude>io.papermc.paper:paper-api</exclude>
                                 </excludes>
                             </artifactSet>
+
+                            <!-- Add filters to handle overlapping resources -->
+                            <filters>
+                                <filter>
+                                    <artifact>org.jetbrains:annotations</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+
                             <!-- Relocate classes to avoid conflicts with other plugins -->
                             <relocations>
                                 <relocation>
