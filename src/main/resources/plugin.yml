@@ -6,8 +6,29 @@ api-version: 1.21 # Updated to reflect your server's primary version
 authors: [YourName] # Change this to your name or server's name
 description: A Minecraft plugin for nested /warp commands, allowing "folders" for warps.
 
-# IMPORTANT: The 'commands' section has been removed as per PaperMC's requirements for modern plugins.
-# Commands are now registered programmatically in the NestedWarpsPlugin.java file.
+# IMPORTANT: Commands MUST be declared here in plugin.yml for Paper to recognize them.
+# The actual execution logic and tab completion are handled programmatically in the Java code.
+commands:
+  warp:
+    description: Teleports to a warp (e.g., /warp creative/build1).
+    usage: /<command> [warp_name]
+    permission: nestedwarps.warp
+    permission-message: You do not have permission to use this command.
+  setwarp:
+    description: Sets a new warp at your current location (e.g., /setwarp creative/build1).
+    usage: /<command> <warp_name>
+    permission: nestedwarps.setwarp
+    permission-message: You do not have permission to set warps.
+  delwarp:
+    description: Deletes an existing warp (e.g., /delwarp creative/build1).
+    usage: /<command> <warp_name>
+    permission: nestedwarps.delwarp
+    permission-message: You do not have permission to delete warps.
+  warps:
+    description: Lists all available warps.
+    usage: /<command>
+    permission: nestedwarps.list
+    permission-message: You do not have permission to list warps.
 
 permissions:
   nestedwarps.warp:
