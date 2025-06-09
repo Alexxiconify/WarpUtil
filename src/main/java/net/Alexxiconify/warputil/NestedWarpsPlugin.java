@@ -21,7 +21,7 @@ import java.util.Objects; // Added for Objects.requireNonNull
 import java.util.stream.Collectors;
 
 @SuppressWarnings("ALL") // Keeping this annotation if the user prefers it
-public class Warputil extends JavaPlugin implements CommandExecutor, TabCompleter { // Changed class name for consistency
+public class NestedWarpsPlugin extends JavaPlugin implements CommandExecutor, TabCompleter { // Changed class name for consistency
 
  @Override
  public void onEnable() {

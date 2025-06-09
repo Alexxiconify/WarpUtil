@@ -1,4 +1,4 @@
-name: warputil
+name: NestedWarps
 version: '0.0.1'
-main: net.Alexxiconify.warputil.Warputil
+main: net.Alexxiconify.warputil.NestedWarpsPlugin
 api-version: '1.21'
