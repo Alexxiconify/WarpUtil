@@ -1,0 +1,44 @@
+# plugin.yml
+name: NestedWarps
+version: 1.0
+main: net.Alexxiconify.warputil.NestedWarpsPlugin # Updated to match the package and class name
+api-version: 1.18 # Adjust this to your server's Minecraft version (e.g., 1.19, 1.20)
+authors: [YourName] # Change this to your name or server's name
+description: A Minecraft plugin for nested /warp commands, allowing "folders" for warps.
+commands:
+  warp:
+    description: Teleports to a warp (e.g., /warp creative/build1).
+    usage: /<command> [warp_name]
+    permission: nestedwarps.warp
+    permission-message: You do not have permission to use this command.
+  setwarp:
+    description: Sets a new warp at your current location (e.g., /setwarp creative/build1).
+    usage: /<command> <warp_name>
+    permission: nestedwarps.setwarp
+    permission-message: You do not have permission to set warps.
+  delwarp:
+    description: Deletes an existing warp (e.g., /delwarp creative/build1).
+    usage: /<command> <warp_name>
+    permission: nestedwarps.delwarp
+    permission-message: You do not have permission to delete warps.
+  warps:
+    description: Lists all available warps.
+    usage: /<command>
+    permission: nestedwarps.list
+    permission-message: You do not have permission to list warps.
+permissions:
+  nestedwarps.warp:
+    description: Allows players to use the /warp command generally.
+    default: true
+  nestedwarps.warp.*: # Specific warp permission wildcard
+    description: Allows players to warp to any specific warp.
+    default: op # Or 'false' if you want to grant specific warps only
+  nestedwarps.setwarp:
+    description: Allows players to use the /setwarp command.
+    default: true
+  nestedwarps.delwarp:
+    description: Allows players to use the /delwarp command.
+    default: op # Only server operators can delete warps by default
+  nestedwarps.list:
+    description: Allows players to use the /warps command.
+    default: true
