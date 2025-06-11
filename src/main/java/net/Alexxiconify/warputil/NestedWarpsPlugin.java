@@ -4,22 +4,27 @@ package net.Alexxiconify.warputil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer; // For getting UUID of offline players
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.command.CommandMap; // Import CommandMap
+import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.SimplePluginManager; // To access the CommandMap (though Bukkit.getCommandMap() is direct)
+import org.bukkit.plugin.SimplePluginManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID; // Import UUID for player homes
+import java.util.UUID;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Arrays; // Added for Arrays.copyOfRange
 import java.util.stream.Collectors;
 
 @SuppressWarnings("ALL")
@@ -174,6 +179,23 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   homesCmd.setPermission("nestedhomes.list");
   homesCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to list homes.");
   commandMap.register("nestedwarps", homesCmd);
+
+  // --- Share Home Commands ---
+  // /sharehome command
+  Command shareHomeCmd = new Command("sharehome", "Shares your home with another player or revokes access.", "/sharehome <add|remove> <player_name> <home_name>", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new ShareHomeCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new ShareHomeTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  shareHomeCmd.setPermission("nestedhomes.share");
+  shareHomeCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to share homes.");
+  commandMap.register("nestedwarps", shareHomeCmd);
  }
 
 
@@ -293,43 +315,70 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
  /**
   * Retrieves a home location for a specific player from the config.
-  * Supports nested paths like "mybase/farm".
-  * Homes are stored under `homes.<player_uuid>.<home_path>`.
+  * It checks personal homes first, then homes shared by others.
   *
   * @param playerUUID The UUID of the player.
-  * @param homePath The path to the home (e.g., "mybase" or "mybase/farm").
+  * @param homePath The path to the home (e.g., "mybase/farm").
   * @return The Location object if found, null otherwise.
   */
  private @Nullable Location getHomeLocation(@NotNull UUID playerUUID, String homePath) {
+  // 1. Check personal homes first
   ConfigurationSection playerHomesSection = getConfig().getConfigurationSection("homes." + playerUUID.toString());
-  if (playerHomesSection == null) return null;
-
-  ConfigurationSection homeData = playerHomesSection.getConfigurationSection(homePath.replace("/", "."));
-  if (homeData == null) {
-   return null; // Home path not found for this player
+  if (playerHomesSection != null) {
+   ConfigurationSection personalHomeData = playerHomesSection.getConfigurationSection(homePath.replace("/", "."));
+   if (personalHomeData != null && personalHomeData.contains("world")) {
+    return loadLocationFromSection(personalHomeData, homePath);
+   }
   }
 
+  // 2. If not a personal home, check homes shared with this player
+  ConfigurationSection sharedHomesSection = getConfig().getConfigurationSection("shared_homes");
+  if (sharedHomesSection != null) {
+   for (String sharerUUIDStr : sharedHomesSection.getKeys(false)) {
+    ConfigurationSection sharerSection = sharedHomesSection.getConfigurationSection(sharerUUIDStr);
+    if (sharerSection != null) {
+     ConfigurationSection targetPlayerSection = sharerSection.getConfigurationSection(playerUUID.toString());
+     if (targetPlayerSection != null && targetPlayerSection.contains(homePath.replace("/", "."))) {
+      // This home is shared with the target player. Now get the actual location from the sharer's personal homes.
+      UUID sharerUUID = UUID.fromString(sharerUUIDStr);
+      ConfigurationSection actualSharerHomeData = getConfig().getConfigurationSection("homes." + sharerUUID.toString() + "." + homePath.replace("/", "."));
+      if (actualSharerHomeData != null && actualSharerHomeData.contains("world")) {
+       return loadLocationFromSection(actualSharerHomeData, homePath);
+      }
+     }
+    }
+   }
+  }
+
+  return null;
+ }
+
+ /**
+  * Helper method to load a Location from a ConfigurationSection.
+  */
+ private @Nullable Location loadLocationFromSection(@NotNull ConfigurationSection section, String pathForLogging) {
   try {
-   String worldName = homeData.getString("world");
+   String worldName = section.getString("world");
    if (worldName == null) return null;
    World world = Bukkit.getWorld(worldName);
    if (world == null) {
-    getLogger().warning("World '" + worldName + "' for home '" + homePath + "' of player " + playerUUID + " not found!");
+    getLogger().warning("World '" + worldName + "' for path '" + pathForLogging + "' not found! This entry may be invalid.");
     return null;
    }
 
-   double x = homeData.getDouble("x");
-   double y = homeData.getDouble("y");
-   double z = homeData.getDouble("z");
-   float yaw = (float) homeData.getDouble("yaw");
-   float pitch = (float) homeData.getDouble("pitch");
+   double x = section.getDouble("x");
+   double y = section.getDouble("y");
+   double z = section.getDouble("z");
+   float yaw = (float) section.getDouble("yaw");
+   float pitch = (float) section.getDouble("pitch");
 
    return new Location(world, x, y, z, yaw, pitch);
   } catch (Exception e) {
-   getLogger().severe("Error loading home '" + homePath + "' for player " + playerUUID + ": " + e.getMessage());
+   getLogger().severe("Error loading location for path '" + pathForLogging + "': " + e.getMessage());
    return null;
   }
  }
+
 
  /**
   * Saves a home location for a specific player to the config.
@@ -356,6 +405,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   * Deletes a home location for a specific player from the config.
   * Supports nested paths like "mybase/farm".
   * Homes are stored under `homes.<player_uuid>.<home_path>`.
+  * Also removes any sharing entries for this home.
   *
   * @param playerUUID The UUID of the player.
   * @param homePath The path to the home to delete.
@@ -365,6 +415,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   String configPath = "homes." + playerUUID.toString() + "." + homePath.replace("/", ".");
   if (getConfig().contains(configPath)) {
    getConfig().set(configPath, null); // Set to null to remove the section
+   removeSharingEntriesForHome(playerUUID, homePath); // Remove any sharing entries
    saveConfig();
    return true;
   }
@@ -397,6 +448,109 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    }
   }
   return homePaths;
+ }
+
+ /**
+  * Adds a permission for a player's home to be shared with another player.
+  *
+  * @param sharerUUID The UUID of the player who owns the home.
+  * @param targetUUID The UUID of the player with whom the home is shared.
+  * @param homePath The path to the home being shared.
+  * @return true if added, false if already shared or cannot be added.
+  */
+ private boolean addSharedHomePermission(@NotNull UUID sharerUUID, @NotNull UUID targetUUID, @NotNull String homePath) {
+  String configPath = "shared_homes." + sharerUUID.toString() + "." + targetUUID.toString() + "." + homePath.replace("/", ".");
+  if (!getConfig().contains(configPath)) {
+   getConfig().set(configPath, true); // Use a boolean value to indicate presence
+   saveConfig();
+   return true;
+  }
+  return false;
+ }
+
+ /**
+  * Removes a permission for a player's home to be shared with another player.
+  *
+  * @param sharerUUID The UUID of the player who owns the home.
+  * @param targetUUID The UUID of the player from whom the home is unshared.
+  * @param homePath The path to the home being unshared.
+  * @return true if removed, false if not found.
+  */
+ private boolean removeSharedHomePermission(@NotNull UUID sharerUUID, @NotNull UUID targetUUID, @NotNull String homePath) {
+  String configPath = "shared_homes." + sharerUUID.toString() + "." + targetUUID.toString() + "." + homePath.replace("/", ".");
+  if (getConfig().contains(configPath)) {
+   getConfig().set(configPath, null); // Remove the entry
+   saveConfig();
+   return true;
+  }
+  return false;
+ }
+
+ /**
+  * Removes all sharing entries for a specific home that has been deleted.
+  *
+  * @param sharerUUID The UUID of the player whose home was deleted.
+  * @param homePath The path to the home that was deleted.
+  */
+ private void removeSharingEntriesForHome(@NotNull UUID sharerUUID, @NotNull String homePath) {
+  ConfigurationSection sharerSharedHomes = getConfig().getConfigurationSection("shared_homes." + sharerUUID.toString());
+  if (sharerSharedHomes != null) {
+   // Iterate over all target players
+   for (String targetUUIDStr : sharerSharedHomes.getKeys(false)) {
+    ConfigurationSection targetSection = sharerSharedHomes.getConfigurationSection(targetUUIDStr);
+    if (targetSection != null && targetSection.contains(homePath.replace("/", "."))) {
+     targetSection.set(homePath.replace("/", "."), null);
+    }
+   }
+  }
+ }
+
+
+ /**
+  * Gets all homes shared *with* a specific player by other players.
+  * Returns a map where key is the full home path (e.g., "sharer_name/home_path")
+  * and value is the sharer's UUID. This allows for clear identification.
+  *
+  * @param targetUUID The UUID of the player receiving shared homes.
+  * @return A map of shared home paths and their sharer UUIDs.
+  */
+ private @NotNull Map<String, UUID> getSharedHomesWithPlayer(@NotNull UUID targetUUID) {
+  Map<String, UUID> sharedHomes = new HashMap<>();
+  ConfigurationSection sharedHomesRoot = getConfig().getConfigurationSection("shared_homes");
+  if (sharedHomesRoot == null) return sharedHomes;
+
+  for (String sharerUUIDStr : sharedHomesRoot.getKeys(false)) {
+   ConfigurationSection sharerSection = sharedHomesRoot.getConfigurationSection(sharerUUIDStr);
+   if (sharerSection != null) {
+    ConfigurationSection targetPlayerSection = sharerSection.getConfigurationSection(targetUUID.toString());
+    if (targetPlayerSection != null) {
+     // Recursively get all shared home paths for this specific target player from this sharer
+     // Note: Here, the recursive call is used to get the paths that are explicitly marked as true under
+     // 'shared_homes.<sharer_uuid>.<target_uuid>.<home_path>'
+     // The actual location still needs to be retrieved from the sharer's 'homes' section.
+     List<String> paths = new ArrayList<>();
+     // Instead of getAllHomePathsRecursive, we need to iterate directly over the entries in targetPlayerSection
+     // which represent the shared homes.
+     for (String homeKey : targetPlayerSection.getKeys(false)) {
+      // Reconstruct full path for the map key. This assumes 'homeKey' is already the correct nested path.
+      // However, to ensure it's a valid home path that was actually shared, we still need to check
+      // if the original home exists for the sharer.
+      UUID sharerUUID = UUID.fromString(sharerUUIDStr);
+      if (getHomeLocation(sharerUUID, homeKey.replace(".", "/")) != null) { // Validate existence
+       paths.add(homeKey.replace(".", "/"));
+      }
+     }
+
+     for (String path : paths) {
+      // For display, we use the sharer's name and the home path
+      OfflinePlayer sharer = Bukkit.getOfflinePlayer(UUID.fromString(sharerUUIDStr));
+      String sharerName = sharer.getName() != null ? sharer.getName() : sharerUUIDStr.substring(0, 8); // Use part of UUID if name not found
+      sharedHomes.put(sharerName + "/" + path, UUID.fromString(sharerUUIDStr));
+     }
+    }
+   }
+  }
+  return sharedHomes;
  }
 
 
@@ -658,7 +812,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    String homePath = String.join("/", args);
    UUID playerUUID = player.getUniqueId();
 
-   if (!player.hasPermission("nestedhomes.home") && !player.hasPermission("nestedhomes.home." + homePath.replace("/", "."))) {
+   if (!player.hasPermission("nestedhomes.home")) { // Check general home permission
     player.sendMessage(ChatColor.RED + "You do not have permission to teleport to homes.");
     return true;
    }
@@ -666,9 +820,17 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    Location homeLocation = getHomeLocation(playerUUID, homePath);
    if (homeLocation != null) {
     player.teleport(homeLocation);
-    player.sendMessage(ChatColor.GREEN + "Teleported to home: " + ChatColor.GOLD + homePath);
+    // Check if it's a personal home or shared home for message clarity
+    ConfigurationSection personalHomesSection = getConfig().getConfigurationSection("homes." + playerUUID.toString());
+    if (personalHomesSection != null && personalHomesSection.contains(homePath.replace("/", "."))) {
+     player.sendMessage(ChatColor.GREEN + "Teleported to your personal home: " + ChatColor.GOLD + homePath);
+    } else {
+     // This implies it's a shared home
+     player.sendMessage(ChatColor.GREEN + "Teleported to shared home: " + ChatColor.GOLD + homePath);
+    }
+
    } else {
-    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found.");
+    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found or you do not have access to it.");
    }
    return true;
   }
@@ -688,39 +850,79 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    }
 
    List<String> completions = new ArrayList<>();
-   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
-   if (playerHomesRoot == null) return Collections.emptyList();
-
    String currentInputPart = args[args.length - 1].toLowerCase();
 
-   ConfigurationSection sectionToSearch = playerHomesRoot;
-   for (int i = 0; i < args.length - 1; i++) {
-    if (sectionToSearch == null) break;
-    sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
-   }
+   // --- Add personal home completions ---
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   if (playerHomesRoot != null) {
+    ConfigurationSection sectionToSearch = playerHomesRoot;
+    for (int i = 0; i < args.length - 1; i++) {
+     if (sectionToSearch == null) break;
+     sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
+    }
 
-   if (sectionToSearch == null) return Collections.emptyList();
-
-   for (String key : sectionToSearch.getKeys(false)) {
-    if (key.toLowerCase().startsWith(currentInputPart)) {
-     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
-     if (childSection != null) {
-      boolean isActualHome = childSection.contains("world") && childSection.contains("x") &&
-              childSection.contains("y") && childSection.contains("z");
-
-      if (isActualHome) {
-       completions.add(key);
-      }
-
-      if (childSection.getKeys(false).size() > 0) {
-       completions.add(key + "/");
+    if (sectionToSearch != null) {
+     for (String key : sectionToSearch.getKeys(false)) {
+      if (key.toLowerCase().startsWith(currentInputPart)) {
+       ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+       if (childSection != null) {
+        boolean isActualHome = childSection.contains("world") && childSection.contains("x") &&
+                childSection.contains("y") && childSection.contains("z");
+        if (isActualHome) {
+         completions.add(key);
+        }
+        if (childSection.getKeys(false).size() > 0) {
+         completions.add(key + "/");
+        }
+       }
       }
      }
     }
    }
-   return completions.stream().distinct().collect(Collectors.toList());
+
+   // --- Add shared home completions ---
+   Map<String, UUID> sharedHomes = getSharedHomesWithPlayer(player.getUniqueId());
+   for (Map.Entry<String, UUID> entry : sharedHomes.entrySet()) {
+    String fullSharedHomePath = entry.getKey(); // e.g., "sharer_name/myhome/nest"
+    String[] pathParts = fullSharedHomePath.split("/");
+
+    // Check if the current input is matching a shared home's structure
+    boolean pathMatches = true;
+    if (args.length -1 < pathParts.length) { // Ensure there are enough parts in shared home path
+     for (int i = 0; i < args.length - 1; i++) {
+      if (!args[i].equalsIgnoreCase(pathParts[i])) {
+       pathMatches = false;
+       break;
+      }
+     }
+    } else {
+     pathMatches = false; // Input is longer than a shared home path
+    }
+
+
+    if (pathMatches) {
+     // Only add the next part of the shared home path if it starts with current input
+     if (args.length <= pathParts.length && pathParts[args.length -1].toLowerCase().startsWith(currentInputPart)) {
+      completions.add(pathParts[args.length -1]);
+     }
+    } else if (args.length == 1 && fullSharedHomePath.toLowerCase().startsWith(currentInputPart)) {
+     // For the first argument, if it's matching the beginning of a shared home path (sharer_name)
+     completions.add(pathParts[0]); // Add the top-level part (sharer name)
+     if (pathParts.length > 1) {
+      completions.add(pathParts[0] + "/"); // Suggest going into folder
+     }
+    }
+   }
+
+
+   // Filter completions based on what's being typed
+   return completions.stream()
+           .filter(s -> s.toLowerCase().startsWith(currentInputPart))
+           .distinct()
+           .collect(Collectors.toList());
   }
  }
+
 
  /**
   * Inner class for /sethome command logic.
@@ -808,7 +1010,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    if (deleteHomeLocation(playerUUID, homePath)) {
     player.sendMessage(ChatColor.GREEN + "Home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' deleted successfully!");
    } else {
-    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found.");
+    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found or you do not own it.");
    }
    return true;
   }
@@ -862,6 +1064,11 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   }
  }
 
+
+ /**
+  * Inner class for /warps command logic.
+  */
+
  /**
   * Inner class for /homes command logic.
   */
@@ -877,20 +1084,165 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
     return true;
    }
 
-   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
-   List<String> allHomes = getAllHomePathsRecursive(player.getUniqueId(), playerHomesRoot, "");
+   List<String> combinedHomes = new ArrayList<>();
 
-   if (allHomes.isEmpty()) {
-    player.sendMessage(ChatColor.YELLOW + "You have not set any homes yet.");
+   // Add personal homes
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   List<String> personalHomes = getAllHomePathsRecursive(player.getUniqueId(), playerHomesRoot, "");
+   for (String home : personalHomes) {
+    combinedHomes.add(home + ChatColor.DARK_GRAY + " (personal)");
+   }
+
+   // Add homes shared with this player
+   Map<String, UUID> sharedHomesMap = getSharedHomesWithPlayer(player.getUniqueId());
+   for (Map.Entry<String, UUID> entry : sharedHomesMap.entrySet()) {
+    OfflinePlayer sharer = Bukkit.getOfflinePlayer(entry.getValue());
+    String sharerName = sharer.getName() != null ? sharer.getName() : "Unknown";
+    combinedHomes.add(entry.getKey() + ChatColor.DARK_GRAY + " (shared by " + sharerName + ")");
+   }
+
+
+   if (combinedHomes.isEmpty()) {
+    player.sendMessage(ChatColor.YELLOW + "You have not set or been shared any homes yet.");
    } else {
     player.sendMessage(ChatColor.AQUA + "--- Your Homes ---");
-    Collections.sort(allHomes);
-    for (String home : allHomes) {
+    Collections.sort(combinedHomes); // Sort the combined list
+    for (String home : combinedHomes) {
      player.sendMessage(ChatColor.GRAY + "- " + home);
     }
     player.sendMessage(ChatColor.AQUA + "---------------------");
    }
    return true;
+  }
+ }
+
+ /**
+  * Inner class for /sharehome command logic.
+  */
+ private class ShareHomeCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player sharerPlayer)) {
+    sender.sendMessage(ChatColor.RED + "Only players can share homes.");
+    return true;
+   }
+
+   if (!sharerPlayer.hasPermission("nestedhomes.share")) {
+    sharerPlayer.sendMessage(ChatColor.RED + "You do not have permission to share homes.");
+    return true;
+   }
+
+   if (args.length < 3) {
+    sharerPlayer.sendMessage(ChatColor.YELLOW + "Usage: /sharehome <add|remove> <player_name> <home_name>");
+    sharerPlayer.sendMessage(ChatColor.YELLOW + "Example: /sharehome add Notch mybase/farm");
+    return true;
+   }
+
+   String action = args[0].toLowerCase(); // "add" or "remove"
+   String targetPlayerName = args[1];
+   String homePath = String.join("/", Arrays.copyOfRange(args, 2, args.length)); // Get full home path
+
+   OfflinePlayer targetOfflinePlayer = Bukkit.getOfflinePlayer(targetPlayerName);
+   if (!targetOfflinePlayer.hasPlayedBefore() && targetOfflinePlayer.getUniqueId() == null) {
+    sharerPlayer.sendMessage(ChatColor.RED + "Player '" + targetPlayerName + "' not found. They must have joined the server before.");
+    return true;
+   }
+
+   UUID sharerUUID = sharerPlayer.getUniqueId();
+   UUID targetUUID = targetOfflinePlayer.getUniqueId();
+
+   // First, ensure the home exists and belongs to the sharer
+   // We need to use a direct home path lookup for the owner's home, not the recursive getHomeLocation.
+   // The getHomeLocation includes shared homes, which is not what we want to validate for ownership.
+   ConfigurationSection sharerHomesSection = getConfig().getConfigurationSection("homes." + sharerUUID.toString());
+   Location homeLocation = null;
+   if (sharerHomesSection != null) {
+    ConfigurationSection personalHomeData = sharerHomesSection.getConfigurationSection(homePath.replace("/", "."));
+    if (personalHomeData != null && personalHomeData.contains("world")) {
+     homeLocation = loadLocationFromSection(personalHomeData, homePath);
+    }
+   }
+
+   if (homeLocation == null) {
+    sharerPlayer.sendMessage(ChatColor.RED + "Your personal home '" + homePath + "' not found or you do not own it.");
+    return true;
+   }
+
+   if (action.equals("add")) {
+    if (addSharedHomePermission(sharerUUID, targetUUID, homePath)) {
+     sharerPlayer.sendMessage(ChatColor.GREEN + "Successfully shared your home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' with " + ChatColor.YELLOW + targetPlayerName + ChatColor.GREEN + ".");
+    } else {
+     sharerPlayer.sendMessage(ChatColor.YELLOW + "Your home '" + homePath + "' is already shared with " + targetPlayerName + ".");
+    }
+   } else if (action.equals("remove")) {
+    if (removeSharedHomePermission(sharerUUID, targetUUID, homePath)) {
+     sharerPlayer.sendMessage(ChatColor.GREEN + "Successfully unshared your home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' from " + ChatColor.YELLOW + targetPlayerName + ChatColor.GREEN + ".");
+    } else {
+     sharerPlayer.sendMessage(ChatColor.YELLOW + "Your home '" + homePath + "' was not shared with " + targetPlayerName + ".");
+    }
+   } else {
+    sharerPlayer.sendMessage(ChatColor.YELLOW + "Usage: /sharehome <add|remove> <player_name> <home_name>");
+   }
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /sharehome tab completion logic.
+  */
+ private class ShareHomeTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    return Collections.emptyList();
+   }
+   if (!player.hasPermission("nestedhomes.share")) {
+    return Collections.emptyList();
+   }
+
+   List<String> completions = new ArrayList<>();
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   if (args.length == 1) { // Completing "add" or "remove"
+    if ("add".startsWith(currentInputPart)) completions.add("add");
+    if ("remove".startsWith(currentInputPart)) completions.add("remove");
+   } else if (args.length == 2) { // Completing player names
+    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+     if (!onlinePlayer.getUniqueId().equals(player.getUniqueId()) && onlinePlayer.getName().toLowerCase().startsWith(currentInputPart)) {
+      completions.add(onlinePlayer.getName());
+     }
+    }
+   } else if (args.length >= 3) { // Completing home names
+    String action = args[0].toLowerCase();
+    String targetPlayerName = args[1]; // Not directly used for completion, but part of context
+
+    // Get personal homes of the sender
+    ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+    if (playerHomesRoot != null) {
+     // Reconstruct the path for recursive search
+     String partialHomePath = String.join("/", Arrays.copyOfRange(args, 2, args.length - 1));
+     ConfigurationSection sectionToSearch = playerHomesRoot;
+     for (String argPart : Arrays.copyOfRange(args, 2, args.length -1)) {
+      if (sectionToSearch == null) break;
+      sectionToSearch = sectionToSearch.getConfigurationSection(argPart);
+     }
+
+     if (sectionToSearch != null) {
+      for (String key : sectionToSearch.getKeys(false)) {
+       if (key.toLowerCase().startsWith(currentInputPart)) {
+        ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+        if (childSection != null && childSection.contains("world") && childSection.contains("x")) { // Is an actual home
+         completions.add(key);
+        }
+        if (childSection != null && childSection.getKeys(false).size() > 0) { // Is a folder
+         completions.add(key + "/");
+        }
+       }
+      }
+     }
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
   }
  }
 }
