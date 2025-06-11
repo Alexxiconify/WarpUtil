@@ -1,44 +1,39 @@
 # plugin.yml
 name: NestedWarps
 version: 1.0
-main: net.Alexxiconify.warputil.NestedWarpsPlugin # Updated to match the package and class name
-api-version: 1.18 # Adjust this to your server's Minecraft version (e.g., 1.19, 1.20)
-authors: [YourName] # Change this to your name or server's name
-description: A Minecraft plugin for nested /warp commands, allowing "folders" for warps.
-commands:
-  warp:
-    description: Teleports to a warp (e.g., /warp creative/build1).
-    usage: /<command> [warp_name]
-    permission: nestedwarps.warp
-    permission-message: You do not have permission to use this command.
-  setwarp:
-    description: Sets a new warp at your current location (e.g., /setwarp creative/build1).
-    usage: /<command> <warp_name>
-    permission: nestedwarps.setwarp
-    permission-message: You do not have permission to set warps.
-  delwarp:
-    description: Deletes an existing warp (e.g., /delwarp creative/build1).
-    usage: /<command> <warp_name>
-    permission: nestedwarps.delwarp
-    permission-message: You do not have permission to delete warps.
-  warps:
-    description: Lists all available warps.
-    usage: /<command>
-    permission: nestedwarps.list
-    permission-message: You do not have permission to list warps.
+main: net.Alexxiconify.warputil.NestedWarpsPlugin
+api-version: 1.21 # Ensure this matches your server's Minecraft version
+authors: Alexxiconify
+description: A Minecraft plugin for nested /warp and /home commands, including shared homes.
+
 permissions:
   nestedwarps.warp:
     description: Allows players to use the /warp command generally.
     default: true
-  nestedwarps.warp.*: # Specific warp permission wildcard
-    description: Allows players to warp to any specific warp.
+  nestedwarps.warp.*:
+    description: Allows players to warp to any specific public warp.
     default: op # Or 'false' if you want to grant specific warps only
   nestedwarps.setwarp:
     description: Allows players to use the /setwarp command.
-    default: true
+    default: op
   nestedwarps.delwarp:
     description: Allows players to use the /delwarp command.
-    default: op # Only server operators can delete warps by default
+    default: op
   nestedwarps.list:
     description: Allows players to use the /warps command.
     default: true
+  nestedhomes.home:
+    description: Allows players to use the /home command (including shared homes).
+    default: true
+  nestedhomes.sethome:
+    description: Allows players to use the /sethome command.
+    default: true
+  nestedhomes.delhome:
+    description: Allows players to use the /delhome command.
+    default: true
+  nestedhomes.list:
+    description: Allows players to use the /homes command.
+    default: true
+  nestedhomes.share:
+    description: Allows players to use the /sharehome command to manage shared homes.
+    default: true # Consider changing to 'op' if you want to restrict sharing ability
