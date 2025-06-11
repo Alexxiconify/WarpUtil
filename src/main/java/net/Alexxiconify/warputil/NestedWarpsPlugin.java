@@ -9,18 +9,18 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.command.PluginCommand; // Import PluginCommand
+import org.bukkit.command.CommandMap; // Import CommandMap
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.SimplePluginManager; // To access the CommandMap (though Bukkit.getCommandMap() is direct)
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID; // Import UUID for player homes
 import java.util.stream.Collectors;
-// Changed from import java.util.Objects; to avoid ambiguity if Object is needed
-
 
 @SuppressWarnings("ALL")
 public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
@@ -41,65 +41,139 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
  }
 
  /**
-  * Programmatically registers all commands for this plugin.
+  * Programmatically registers all commands for this plugin using Bukkit's CommandMap.
   * This method is called during onEnable().
   */
  private void registerCommands() {
-  // Create and register PluginCommand instances
-  // For each command, we create a new instance of an inner class that
-  // implements CommandExecutor and TabCompleter.
-  // This is PaperMC's recommended way for newer versions.
+  CommandMap commandMap = Bukkit.getCommandMap();
 
+  // --- Warp Commands ---
   // /warp command
-  PluginCommand warpCommand = getServer().getPluginCommand("warp");
-  if (warpCommand != null) {
-   warpCommand.setExecutor(new WarpCommandExecutor());
-   warpCommand.setTabCompleter(new WarpTabCompleter());
-   warpCommand.setDescription("Teleports to a warp (e.g., /warp creative/build1).");
-   warpCommand.setUsage("/<command> [warp_name]");
-   warpCommand.setPermission("nestedwarps.warp");
-   warpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to use this command.");
-  } else {
-   getLogger().severe("Command 'warp' could not be found for registration. Is it defined in plugin.yml (even though Paper plugins don't fully support it)?");
-  }
+  Command warpCmd = new Command("warp", "Teleports to a warp (e.g., /warp creative/build1).", "/warp [warp_name]", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new WarpCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new WarpTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  warpCmd.setPermission("nestedwarps.warp");
+  warpCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to use this command.");
+  commandMap.register("nestedwarps", warpCmd);
 
   // /setwarp command
-  PluginCommand setWarpCommand = getServer().getPluginCommand("setwarp");
-  if (setWarpCommand != null) {
-   setWarpCommand.setExecutor(new SetWarpCommandExecutor());
-   setWarpCommand.setTabCompleter(new SetWarpTabCompleter()); // Optional: for tab completion of existing names
-   setWarpCommand.setDescription("Sets a new warp at your current location (e.g., /setwarp creative/build1).");
-   setWarpCommand.setUsage("/<command> <warp_name>");
-   setWarpCommand.setPermission("nestedwarps.setwarp");
-   setWarpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to set warps.");
-  } else {
-   getLogger().severe("Command 'setwarp' could not be found for registration.");
-  }
+  Command setWarpCmd = new Command("setwarp", "Sets a new warp at your current location (e.g., /setwarp creative/build1).", "/setwarp <warp_name>", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new SetWarpCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new SetWarpTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  setWarpCmd.setPermission("nestedwarps.setwarp");
+  setWarpCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to set warps.");
+  commandMap.register("nestedwarps", setWarpCmd);
 
   // /delwarp command
-  PluginCommand delWarpCommand = getServer().getPluginCommand("delwarp");
-  if (delWarpCommand != null) {
-   delWarpCommand.setExecutor(new DelWarpCommandExecutor());
-   delWarpCommand.setTabCompleter(new DelWarpTabCompleter());
-   delWarpCommand.setDescription("Deletes an existing warp (e.g., /delwarp creative/build1).");
-   delWarpCommand.setUsage("/<command> <warp_name>");
-   delWarpCommand.setPermission("nestedwarps.delwarp");
-   delWarpCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to delete warps.");
-  } else {
-   getLogger().severe("Command 'delwarp' could not be found for registration.");
-  }
+  Command delWarpCmd = new Command("delwarp", "Deletes an existing warp (e.g., /delwarp creative/build1).", "/delwarp <warp_name>", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new DelWarpCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new DelWarpTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  delWarpCmd.setPermission("nestedwarps.delwarp");
+  delWarpCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to delete warps.");
+  commandMap.register("nestedwarps", delWarpCmd);
 
   // /warps command
-  PluginCommand warpsCommand = getServer().getPluginCommand("warps");
-  if (warpsCommand != null) {
-   warpsCommand.setExecutor(new WarpsCommandExecutor());
-   warpsCommand.setDescription("Lists all available warps.");
-   warpsCommand.setUsage("/<command>");
-   warpsCommand.setPermission("nestedwarps.list");
-   warpsCommand.setPermissionMessage(ChatColor.RED + "You do not have permission to list warps.");
-  } else {
-   getLogger().severe("Command 'warps' could not be found for registration.");
-  }
+  Command warpsCmd = new Command("warps", "Lists all available warps.", "/warps", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new WarpsCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return Collections.emptyList(); // No tab completion needed for /warps
+   }
+  };
+  warpsCmd.setPermission("nestedwarps.list");
+  warpsCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to list warps.");
+  commandMap.register("nestedwarps", warpsCmd);
+
+  // --- Home Commands ---
+  // /home command
+  Command homeCmd = new Command("home", "Teleports to your personal home (e.g., /home mybase/farm).", "/home [home_name]", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new HomeCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new HomeTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  homeCmd.setPermission("nestedhomes.home");
+  homeCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to use homes.");
+  commandMap.register("nestedwarps", homeCmd); // Using "nestedwarps" as fallback prefix
+
+  // /sethome command
+  Command setHomeCmd = new Command("sethome", "Sets a personal home at your current location (e.g., /sethome mybase/farm).", "/sethome <home_name>", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new SetHomeCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new SetHomeTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  setHomeCmd.setPermission("nestedhomes.sethome");
+  setHomeCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to set homes.");
+  commandMap.register("nestedwarps", setHomeCmd);
+
+  // /delhome command
+  Command delHomeCmd = new Command("delhome", "Deletes a personal home (e.g., /delhome mybase/farm).", "/delhome <home_name>", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new DelHomeCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return new DelHomeTabCompleter().onTabComplete(sender, this, alias, args);
+   }
+  };
+  delHomeCmd.setPermission("nestedhomes.delhome");
+  delHomeCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to delete homes.");
+  commandMap.register("nestedwarps", delHomeCmd);
+
+  // /homes command
+  Command homesCmd = new Command("homes", "Lists all your personal homes.", "/homes", new ArrayList<>()) {
+   @Override
+   public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    return new HomesCommandExecutor().onCommand(sender, this, commandLabel, args);
+   }
+   @Override
+   public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
+    return Collections.emptyList(); // No tab completion needed for /homes
+   }
+  };
+  homesCmd.setPermission("nestedhomes.list");
+  homesCmd.setPermissionMessage(ChatColor.RED + "You do not have permission to list homes.");
+  commandMap.register("nestedwarps", homesCmd);
  }
 
 
@@ -216,6 +290,115 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   }
   return warpPaths;
  }
+
+ /**
+  * Retrieves a home location for a specific player from the config.
+  * Supports nested paths like "mybase/farm".
+  * Homes are stored under `homes.<player_uuid>.<home_path>`.
+  *
+  * @param playerUUID The UUID of the player.
+  * @param homePath The path to the home (e.g., "mybase" or "mybase/farm").
+  * @return The Location object if found, null otherwise.
+  */
+ private @Nullable Location getHomeLocation(@NotNull UUID playerUUID, String homePath) {
+  ConfigurationSection playerHomesSection = getConfig().getConfigurationSection("homes." + playerUUID.toString());
+  if (playerHomesSection == null) return null;
+
+  ConfigurationSection homeData = playerHomesSection.getConfigurationSection(homePath.replace("/", "."));
+  if (homeData == null) {
+   return null; // Home path not found for this player
+  }
+
+  try {
+   String worldName = homeData.getString("world");
+   if (worldName == null) return null;
+   World world = Bukkit.getWorld(worldName);
+   if (world == null) {
+    getLogger().warning("World '" + worldName + "' for home '" + homePath + "' of player " + playerUUID + " not found!");
+    return null;
+   }
+
+   double x = homeData.getDouble("x");
+   double y = homeData.getDouble("y");
+   double z = homeData.getDouble("z");
+   float yaw = (float) homeData.getDouble("yaw");
+   float pitch = (float) homeData.getDouble("pitch");
+
+   return new Location(world, x, y, z, yaw, pitch);
+  } catch (Exception e) {
+   getLogger().severe("Error loading home '" + homePath + "' for player " + playerUUID + ": " + e.getMessage());
+   return null;
+  }
+ }
+
+ /**
+  * Saves a home location for a specific player to the config.
+  * Supports nested paths like "mybase/farm".
+  * Homes are stored under `homes.<player_uuid>.<home_path>`.
+  *
+  * @param playerUUID The UUID of the player.
+  * @param homePath The path to the home.
+  * @param location The Location object to save.
+  */
+ private void saveHomeLocation(@NotNull UUID playerUUID, String homePath, @NotNull Location location) {
+  String configPath = "homes." + playerUUID.toString() + "." + homePath.replace("/", ".");
+
+  getConfig().set(configPath + ".world", location.getWorld().getName());
+  getConfig().set(configPath + ".x", location.getX());
+  getConfig().set(configPath + ".y", location.getY());
+  getConfig().set(configPath + ".z", location.getZ());
+  getConfig().set(configPath + ".yaw", location.getYaw());
+  getConfig().set(configPath + ".pitch", location.getPitch());
+  saveConfig();
+ }
+
+ /**
+  * Deletes a home location for a specific player from the config.
+  * Supports nested paths like "mybase/farm".
+  * Homes are stored under `homes.<player_uuid>.<home_path>`.
+  *
+  * @param playerUUID The UUID of the player.
+  * @param homePath The path to the home to delete.
+  * @return true if the home was found and deleted, false otherwise.
+  */
+ private boolean deleteHomeLocation(@NotNull UUID playerUUID, String homePath) {
+  String configPath = "homes." + playerUUID.toString() + "." + homePath.replace("/", ".");
+  if (getConfig().contains(configPath)) {
+   getConfig().set(configPath, null); // Set to null to remove the section
+   saveConfig();
+   return true;
+  }
+  return false;
+ }
+
+ /**
+  * Recursively gets all full home paths for a specific player.
+  * A home path is considered valid if its ConfigurationSection contains "world", "x", "y", "z" keys.
+  *
+  * @param playerUUID The UUID of the player.
+  * @param section The current configuration section to search (starts from player's homes root).
+  * @param currentPath The path built so far (e.g., "mybase").
+  * @return A list of full home paths for the player.
+  */
+ private @NotNull List<String> getAllHomePathsRecursive(@NotNull UUID playerUUID, @Nullable ConfigurationSection section, String currentPath) {
+  List<String> homePaths = new ArrayList<>();
+  if (section == null) return homePaths;
+
+  for (String key : section.getKeys(false)) {
+   String newPath = currentPath.isEmpty() ? key : currentPath + "/" + key;
+   ConfigurationSection childSection = section.getConfigurationSection(key);
+
+   if (childSection != null) {
+    if (childSection.contains("world") && childSection.contains("x") &&
+            childSection.contains("y") && childSection.contains("z")) {
+     homePaths.add(newPath);
+    }
+    homePaths.addAll(getAllHomePathsRecursive(playerUUID, childSection, newPath));
+   }
+  }
+  return homePaths;
+ }
+
 
  /**
   * Inner class for /warp command logic.
@@ -447,6 +630,265 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
      sender.sendMessage(ChatColor.GRAY + "- " + warp);
     }
     sender.sendMessage(ChatColor.AQUA + "---------------------");
+   }
+   return true;
+  }
+ }
+
+ // --- Inner Classes for Home Commands ---
+
+ /**
+  * Inner class for /home command logic.
+  */
+ private class HomeCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can use the /home command.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    player.sendMessage(ChatColor.YELLOW + "Usage: /home <home_name>");
+    player.sendMessage(ChatColor.YELLOW + "Example: /home mybase/farm or /home default");
+    player.sendMessage(ChatColor.YELLOW + "Use /homes to see all your available homes.");
+    return true;
+   }
+
+   String homePath = String.join("/", args);
+   UUID playerUUID = player.getUniqueId();
+
+   if (!player.hasPermission("nestedhomes.home") && !player.hasPermission("nestedhomes.home." + homePath.replace("/", "."))) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to teleport to homes.");
+    return true;
+   }
+
+   Location homeLocation = getHomeLocation(playerUUID, homePath);
+   if (homeLocation != null) {
+    player.teleport(homeLocation);
+    player.sendMessage(ChatColor.GREEN + "Teleported to home: " + ChatColor.GOLD + homePath);
+   } else {
+    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found.");
+   }
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /home tab completion logic.
+  */
+ private class HomeTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    return Collections.emptyList();
+   }
+   if (!player.hasPermission("nestedhomes.home")) {
+    return Collections.emptyList();
+   }
+
+   List<String> completions = new ArrayList<>();
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   if (playerHomesRoot == null) return Collections.emptyList();
+
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   ConfigurationSection sectionToSearch = playerHomesRoot;
+   for (int i = 0; i < args.length - 1; i++) {
+    if (sectionToSearch == null) break;
+    sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
+   }
+
+   if (sectionToSearch == null) return Collections.emptyList();
+
+   for (String key : sectionToSearch.getKeys(false)) {
+    if (key.toLowerCase().startsWith(currentInputPart)) {
+     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+     if (childSection != null) {
+      boolean isActualHome = childSection.contains("world") && childSection.contains("x") &&
+              childSection.contains("y") && childSection.contains("z");
+
+      if (isActualHome) {
+       completions.add(key);
+      }
+
+      if (childSection.getKeys(false).size() > 0) {
+       completions.add(key + "/");
+      }
+     }
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+ /**
+  * Inner class for /sethome command logic.
+  */
+ private class SetHomeCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can use the /sethome command.");
+    return true;
+   }
+
+   if (!player.hasPermission("nestedhomes.sethome")) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to set homes.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    player.sendMessage(ChatColor.YELLOW + "Usage: /sethome <home_name>");
+    player.sendMessage(ChatColor.YELLOW + "Example: /sethome mybase/farm or /sethome default");
+    return true;
+   }
+
+   String homePath = String.join("/", args);
+   saveHomeLocation(player.getUniqueId(), homePath, player.getLocation());
+   player.sendMessage(ChatColor.GREEN + "Home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' set successfully!");
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /sethome tab completion logic.
+  */
+ private class SetHomeTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    return Collections.emptyList();
+   }
+   if (!player.hasPermission("nestedhomes.sethome")) {
+    return Collections.emptyList();
+   }
+
+   if (args.length == 0) return Collections.emptyList();
+
+   List<String> completions = new ArrayList<>();
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   List<String> allExistingHomePaths = getAllHomePathsRecursive(player.getUniqueId(), playerHomesRoot, "");
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   for (String existingHome : allExistingHomePaths) {
+    if (existingHome.toLowerCase().startsWith(currentInputPart)) {
+     completions.add(existingHome);
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+ /**
+  * Inner class for /delhome command logic.
+  */
+ private class DelHomeCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can use the /delhome command.");
+    return true;
+   }
+
+   if (!player.hasPermission("nestedhomes.delhome")) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to delete homes.");
+    return true;
+   }
+
+   if (args.length == 0) {
+    player.sendMessage(ChatColor.YELLOW + "Usage: /delhome <home_name>");
+    player.sendMessage(ChatColor.YELLOW + "Example: /delhome mybase/farm or /delhome default");
+    return true;
+   }
+
+   String homePath = String.join("/", args);
+   UUID playerUUID = player.getUniqueId();
+
+   if (deleteHomeLocation(playerUUID, homePath)) {
+    player.sendMessage(ChatColor.GREEN + "Home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' deleted successfully!");
+   } else {
+    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found.");
+   }
+   return true;
+  }
+ }
+
+ /**
+  * Inner class for /delhome tab completion logic.
+  */
+ private class DelHomeTabCompleter implements TabCompleter {
+  @Override
+  public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    return Collections.emptyList();
+   }
+   if (!player.hasPermission("nestedhomes.delhome")) {
+    return Collections.emptyList();
+   }
+
+   List<String> completions = new ArrayList<>();
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   if (playerHomesRoot == null) return Collections.emptyList();
+
+   String currentInputPart = args[args.length - 1].toLowerCase();
+
+   ConfigurationSection sectionToSearch = playerHomesRoot;
+   for (int i = 0; i < args.length - 1; i++) {
+    if (sectionToSearch == null) break;
+    sectionToSearch = sectionToSearch.getConfigurationSection(args[i]);
+   }
+
+   if (sectionToSearch == null) return Collections.emptyList();
+
+   for (String key : sectionToSearch.getKeys(false)) {
+    if (key.toLowerCase().startsWith(currentInputPart)) {
+     ConfigurationSection childSection = sectionToSearch.getConfigurationSection(key);
+     if (childSection != null) {
+      boolean isActualHome = childSection.contains("world") && childSection.contains("x") &&
+              childSection.contains("y") && childSection.contains("z");
+
+      if (isActualHome) {
+       completions.add(key);
+      }
+
+      if (childSection.getKeys(false).size() > 0) {
+       completions.add(key + "/");
+      }
+     }
+    }
+   }
+   return completions.stream().distinct().collect(Collectors.toList());
+  }
+ }
+
+ /**
+  * Inner class for /homes command logic.
+  */
+ private class HomesCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (!(sender instanceof Player player)) {
+    sender.sendMessage(ChatColor.RED + "Only players can list their homes.");
+    return true;
+   }
+   if (!player.hasPermission("nestedhomes.list")) {
+    player.sendMessage(ChatColor.RED + "You do not have permission to list homes.");
+    return true;
+   }
+
+   ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection("homes." + player.getUniqueId().toString());
+   List<String> allHomes = getAllHomePathsRecursive(player.getUniqueId(), playerHomesRoot, "");
+
+   if (allHomes.isEmpty()) {
+    player.sendMessage(ChatColor.YELLOW + "You have not set any homes yet.");
+   } else {
+    player.sendMessage(ChatColor.AQUA + "--- Your Homes ---");
+    Collections.sort(allHomes);
+    for (String home : allHomes) {
+     player.sendMessage(ChatColor.GRAY + "- " + home);
+    }
+    player.sendMessage(ChatColor.AQUA + "---------------------");
    }
    return true;
   }
