@@ -14,7 +14,8 @@ warps:
     pitch: 0.0
 
   # Example of a nested warp
-  creative::
+  creative:
+    build1:
       world: world
       x: 100.5
       y: 70.0
@@ -41,7 +42,6 @@ homes:
       z: 67.89
       yaw: 180.0
       pitch: 0.0
-    mybase:
       farm:
         world: world_survival
         x: 150.0
