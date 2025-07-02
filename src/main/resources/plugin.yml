@@ -37,3 +37,15 @@ permissions:
   nestedhomes.share:
     description: Allows players to use the /sharehome command to manage shared homes.
     default: true # Consider changing to 'op' if you want to restrict sharing ability
+  nestedwarps.admin:
+    description: Allows access to admin commands like /warputil reload and /warputil info.
+    default: op
+  nestedwarps.crossworld:
+    description: Allows players to teleport across worlds using warps.
+    default: op
+  nestedhomes.crossworld:
+    description: Allows players to teleport across worlds using homes.
+    default: op
+  nestedwarps.bypass.regions:
+    description: Allows players to bypass region protection when teleporting.
+    default: op

@@ -1,0 +1,64 @@
+# WarpUtil Messages Configuration
+# You can customize all messages here
+# Use & for color codes (e.g., &a for green, &c for red, &e for yellow)
+
+messages:
+  # General messages
+  no-permission: "&cYou do not have permission to use this command."
+  player-only: "&cThis command can only be used by players."
+  config-reloaded: "&aConfiguration reloaded successfully!"
+  plugin-info: "&bWarpUtil v%version% - &7%warps% warps, %players% players online"
+  admin-usage: "&cUsage: /warputil <reload|info>"
+  
+  # Teleport messages
+  teleport-starting: "&eTeleporting in &6%time% &eseconds..."
+  teleport-success: "&aSuccessfully teleported to %type%: &6%name%"
+  teleport-cancelled-movement: "&cTeleport cancelled - you moved too much!"
+  teleport-cancelled-damage: "&cTeleport cancelled - you took damage!"
+  cooldown: "&cYou must wait &6%time% &cseconds before teleporting again."
+  unsafe-location: "&cThis location is unsafe for teleportation."
+  cross-world-denied: "&cYou do not have permission to teleport across worlds."
+  
+  # Warp messages
+  warp-usage: "&eUsage: &6/warp <name>"
+  warp-not-found: "&cWarp &6%name% &cnot found."
+  warp-set: "&aWarp &6%name% &aset successfully!"
+  warp-deleted: "&aWarp &6%name% &adeleted successfully!"
+  warp-limit-reached: "&cYou have reached the maximum number of warps."
+  warps-header: "&b--- Available Warps ---"
+  warp-list-item: "&7- &6%name%"
+  warps-footer: "&b---------------------"
+  no-warps: "&eNo warps have been set yet."
+  
+  # Home messages
+  home-usage: "&eUsage: &6/home <name>"
+  home-not-found: "&cHome &6%name% &cnot found or you do not have access to it."
+  home-set: "&aHome &6%name% &aset successfully!"
+  home-deleted: "&aHome &6%name% &adeleted successfully!"
+  home-limit-reached: "&cYou have reached the maximum number of homes."
+  homes-header: "&b--- Your Homes ---"
+  home-list-item: "&7- &6%name%"
+  homes-footer: "&b---------------------"
+  no-homes: "&eYou have not set or been shared any homes yet."
+  
+  # Set/Delete command messages
+  setwarp-usage: "&eUsage: &6/setwarp <name>"
+  delwarp-usage: "&eUsage: &6/delwarp <name>"
+  sethome-usage: "&eUsage: &6/sethome <name>"
+  delhome-usage: "&eUsage: &6/delhome <name>"
+  
+  # Share home messages
+  sharehome-usage: "&eUsage: &6/sharehome <add|remove> <player> <home>"
+  player-not-found: "&cPlayer &6%name% &cnot found."
+  home-shared: "&aSuccessfully shared your home &6%name% &awith &6%player%&a."
+  home-already-shared: "&eYour home &6%name% &eis already shared with &6%player%&e."
+  home-unshared: "&aSuccessfully unshared your home &6%name% &afrom &6%player%&a."
+  home-not-shared: "&eYour home &6%name% &ewas not shared with &6%player%&e."
+  
+  # Economy messages
+  insufficient-funds: "&cYou do not have enough money for this action."
+  economy-error: "&cAn error occurred with the economy system."
+  
+  # Error messages
+  error-occurred: "&cAn error occurred. Please contact an administrator."
+  invalid-arguments: "&cInvalid arguments provided." 
