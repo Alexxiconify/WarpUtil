@@ -1,6 +1,7 @@
 package net.Alexxiconify.warputil;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.configuration.ConfigurationSection;
@@ -8,9 +9,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -129,12 +127,7 @@ public class MessageManager {
         message = replacePlaceholders(message, placeholders);
         message = prefix + message;
         
-        sender.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
-        
-        // Send action bar if enabled and sender is a player
-        if (sender instanceof Player && plugin.getConfigManager().isUseActionBar()) {
-            sendActionBar((Player) sender, message);
-        }
+        sender.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(message));
     }
 
     private String replacePlaceholders(String message, Map<String, String> placeholders) {
@@ -144,11 +137,8 @@ public class MessageManager {
         return message;
     }
 
-    private void sendActionBar(Player player, String message) {
-        // Simple action bar implementation
-        // In a full implementation, you might want to use ProtocolLib or similar
-        player.sendTitle("", message, 10, 40, 10);
-    }
+    // Action bar functionality removed due to API compatibility issues
+    // Use ProtocolLib or similar for proper action bar implementation
 
     public String getMessage(String key) {
         return messages.getOrDefault(key, "&cMessage not found: " + key);
@@ -168,8 +158,8 @@ public class MessageManager {
         message = replacePlaceholders(message, placeholders);
         message = prefix + message;
         
-        String finalMessage = ChatColor.translateAlternateColorCodes('&', message);
-        plugin.getServer().broadcastMessage(finalMessage);
+        Component finalMessage = LegacyComponentSerializer.legacyAmpersand().deserialize(message);
+        plugin.getServer().broadcast(finalMessage);
     }
 
     public void logMessage(String messageKey) {

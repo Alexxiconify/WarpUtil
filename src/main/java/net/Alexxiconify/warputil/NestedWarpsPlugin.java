@@ -1050,7 +1050,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
      break;
     case "info":
      messageManager.sendMessage(sender, "plugin-info", Map.of(
-        "version", getDescription().getVersion(),
+        "version", "1.0",
         "warps", String.valueOf(getAllWarpPaths().size()),
         "players", String.valueOf(Bukkit.getOnlinePlayers().size())
      ));
