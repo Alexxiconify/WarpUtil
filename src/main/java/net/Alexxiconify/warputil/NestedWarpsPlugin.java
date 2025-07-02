@@ -1,7 +1,6 @@
 package net.Alexxiconify.warputil;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -42,6 +41,9 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
  @Override
  public void onEnable() {
+  // Save default config first
+  saveDefaultConfig();
+  
   // Initialize managers
   configManager = new ConfigurationManager(this);
   messageManager = new MessageManager(this);
@@ -49,8 +51,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   safetyManager = new SafetyManager(this);
   effectsManager = new EffectsManager(this);
 
-  // Save default config and load settings
-  saveDefaultConfig();
+  // Load settings
   configManager.reloadConfig();
   messageManager.reloadMessages();
 
@@ -121,7 +122,6 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
     }
    };
    cmd.setPermission(permission);
-   cmd.setPermissionMessage(messageManager.getMessage("no-permission"));
    commandMap.register("nestedwarps", cmd);
   }
 
@@ -186,7 +186,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
      (float) section.getDouble("yaw"), 
      (float) section.getDouble("pitch"));
    } catch (Exception e) {
-    getLogger().severe("Error loading location for path '" + pathForLogging + "': " + e.getMessage());
+    getLogger().warning("Error loading location for path '" + pathForLogging + "': " + e.getMessage());
     return null;
    }
   }
@@ -320,18 +320,18 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player player)) {
-    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
 
    if (args.length == 0) {
-    player.sendMessage(ChatColor.YELLOW + "Usage: /warp <warp_name>");
+    messageManager.sendMessage(player, "warp-usage");
     return true;
    }
 
    String warpPath = String.join("/", args);
    if (!player.hasPermission("nestedwarps.warp." + warpPath.replace("/", ".")) && !player.hasPermission("nestedwarps.warp")) {
-    player.sendMessage(ChatColor.RED + "You do not have permission to warp to " + warpPath + ".");
+    messageManager.sendMessage(player, "no-permission");
     return true;
    }
 
@@ -339,7 +339,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    if (warpLocation != null) {
     initiateTeleport(player, warpLocation, "warp", warpPath);
    } else {
-    player.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
+    messageManager.sendMessage(player, "warp-not-found", Map.of("name", warpPath));
    }
    return true;
   }
@@ -365,18 +365,37 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    @Override
    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
     if (!(sender instanceof Player player)) {
-     sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+     messageManager.sendMessage(sender, "player-only");
      return true;
     }
 
     if (args.length == 0) {
-     player.sendMessage(ChatColor.YELLOW + "Usage: /setwarp <warp_name>");
+     messageManager.sendMessage(player, "setwarp-usage");
      return true;
     }
 
     String warpPath = String.join("/", args);
+    
+    // Check limits
+    if (getAllWarpPaths().size() >= configManager.getMaxWarps()) {
+     messageManager.sendMessage(player, "warp-limit-reached");
+     return true;
+    }
+    
+    // Check economy
+    if (!economyManager.canAffordWarp(player)) {
+     messageManager.sendMessage(player, "insufficient-funds");
+     return true;
+    }
+    
+    // Charge economy
+    if (!economyManager.chargeWarp(player)) {
+     messageManager.sendMessage(player, "economy-error");
+     return true;
+    }
+    
     saveWarpLocation(warpPath, player.getLocation());
-    player.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' set successfully!");
+    messageManager.sendMessage(player, "warp-set", Map.of("name", warpPath));
     return true;
    }
   }
@@ -406,15 +425,19 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    @Override
    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
     if (args.length == 0) {
-     sender.sendMessage(ChatColor.YELLOW + "Usage: /delwarp <warp_name>");
+     messageManager.sendMessage(sender, "delwarp-usage");
      return true;
     }
 
     String warpPath = String.join("/", args);
     if (deleteWarpLocation(warpPath)) {
-     sender.sendMessage(ChatColor.GREEN + "Warp '" + ChatColor.GOLD + warpPath + ChatColor.GREEN + "' deleted successfully!");
+     // Refund if enabled
+     if (sender instanceof Player player && configManager.isRefundOnDelete()) {
+      economyManager.refundWarp(player);
+     }
+     messageManager.sendMessage(sender, "warp-deleted", Map.of("name", warpPath));
     } else {
-     sender.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
+     messageManager.sendMessage(sender, "warp-not-found", Map.of("name", warpPath));
     }
     return true;
    }
@@ -437,12 +460,12 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    List<String> allWarps = getAllWarpPaths();
 
    if (allWarps.isEmpty()) {
-    sender.sendMessage(ChatColor.YELLOW + "No warps have been set yet.");
+    messageManager.sendMessage(sender, "no-warps");
    } else {
-    sender.sendMessage(ChatColor.AQUA + "--- Available Warps ---");
+    messageManager.sendMessage(sender, "warps-header");
     Collections.sort(allWarps);
-    allWarps.forEach(warp -> sender.sendMessage(ChatColor.GRAY + "- " + warp));
-    sender.sendMessage(ChatColor.AQUA + "---------------------");
+    allWarps.forEach(warp -> messageManager.sendMessage(sender, "warp-list-item", Map.of("name", warp)));
+    messageManager.sendMessage(sender, "warps-footer");
    }
    return true;
   }
@@ -457,12 +480,12 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player player)) {
-    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
 
    if (args.length == 0) {
-    player.sendMessage(ChatColor.YELLOW + "Usage: /home <home_name>");
+    messageManager.sendMessage(player, "home-usage");
     return true;
    }
 
@@ -471,7 +494,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    if (homeLocation != null) {
     initiateTeleport(player, homeLocation, "home", homePath);
    } else {
-    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found or you do not have access to it.");
+    messageManager.sendMessage(player, "home-not-found", Map.of("name", homePath));
    }
    return true;
   }
@@ -517,18 +540,37 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player player)) {
-    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
 
    if (args.length == 0) {
-    player.sendMessage(ChatColor.YELLOW + "Usage: /sethome <home_name>");
+    messageManager.sendMessage(player, "sethome-usage");
     return true;
    }
 
    String homePath = String.join("/", args);
+   
+   // Check limits
+   if (getAllHomePaths(player.getUniqueId()).size() >= configManager.getMaxHomes()) {
+    messageManager.sendMessage(player, "home-limit-reached");
+    return true;
+   }
+   
+   // Check economy
+   if (!economyManager.canAffordHome(player)) {
+    messageManager.sendMessage(player, "insufficient-funds");
+    return true;
+   }
+   
+   // Charge economy
+   if (!economyManager.chargeHome(player)) {
+    messageManager.sendMessage(player, "economy-error");
+    return true;
+   }
+   
    saveHomeLocation(player.getUniqueId(), homePath, player.getLocation());
-   player.sendMessage(ChatColor.GREEN + "Home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' set successfully!");
+   messageManager.sendMessage(player, "home-set", Map.of("name", homePath));
    return true;
   }
  }
@@ -567,20 +609,24 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player player)) {
-    sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
 
    if (args.length == 0) {
-    player.sendMessage(ChatColor.YELLOW + "Usage: /delhome <home_name>");
+    messageManager.sendMessage(player, "delhome-usage");
     return true;
    }
 
    String homePath = String.join("/", args);
    if (deleteHomeLocation(player.getUniqueId(), homePath)) {
-    player.sendMessage(ChatColor.GREEN + "Home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' deleted successfully!");
+    // Refund if enabled
+    if (configManager.isRefundOnDelete()) {
+     economyManager.refundHome(player);
+    }
+    messageManager.sendMessage(player, "home-deleted", Map.of("name", homePath));
    } else {
-    player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found or you do not own it.");
+    messageManager.sendMessage(player, "home-not-found", Map.of("name", homePath));
    }
    return true;
   }
@@ -602,8 +648,6 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    List<String> completions = new ArrayList<>();
    ConfigurationSection playerHomesRoot = getConfig().getConfigurationSection(HOMES_SECTION + "." + player.getUniqueId().toString());
    if (playerHomesRoot == null) return Collections.emptyList();
-
-   String currentInput = args.length > 0 ? args[args.length - 1] : "";
 
    ConfigurationSection sectionToSearch = playerHomesRoot;
    for (int i = 0; i < args.length - 1; i++) {
@@ -639,11 +683,11 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player player)) {
-    sender.sendMessage(ChatColor.RED + "Only players can list their homes.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
    if (!player.hasPermission("nestedhomes.list")) {
-    player.sendMessage(ChatColor.RED + "You do not have permission to list homes.");
+    messageManager.sendMessage(player, "no-permission");
     return true;
    }
 
@@ -651,23 +695,23 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    
    // Add personal homes
    List<String> personalHomes = getAllHomePaths(player.getUniqueId());
-   personalHomes.forEach(home -> combinedHomes.add(home + ChatColor.DARK_GRAY + " (personal)"));
+   personalHomes.forEach(home -> combinedHomes.add(home + " (personal)"));
 
    // Add homes shared with this player
    Map<String, UUID> sharedHomes = getSharedHomesWithPlayer(player.getUniqueId());
    sharedHomes.forEach((homePath, sharerUUID) -> {
     OfflinePlayer sharer = Bukkit.getOfflinePlayer(sharerUUID);
     String sharerName = sharer.getName() != null ? sharer.getName() : "Unknown";
-    combinedHomes.add(homePath + ChatColor.DARK_GRAY + " (shared by " + sharerName + ")");
+    combinedHomes.add(homePath + " (shared by " + sharerName + ")");
    });
 
    if (combinedHomes.isEmpty()) {
-    player.sendMessage(ChatColor.YELLOW + "You have not set or been shared any homes yet.");
+    messageManager.sendMessage(player, "no-homes");
    } else {
-    player.sendMessage(ChatColor.AQUA + "--- Your Homes ---");
+    messageManager.sendMessage(player, "homes-header");
     Collections.sort(combinedHomes);
-    combinedHomes.forEach(home -> player.sendMessage(ChatColor.GRAY + "- " + home));
-    player.sendMessage(ChatColor.AQUA + "---------------------");
+    combinedHomes.forEach(home -> messageManager.sendMessage(player, "home-list-item", Map.of("name", home)));
+    messageManager.sendMessage(player, "homes-footer");
    }
    return true;
   }
@@ -680,12 +724,12 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
    if (!(sender instanceof Player sharerPlayer)) {
-    sender.sendMessage(ChatColor.RED + "Only players can share homes.");
+    messageManager.sendMessage(sender, "player-only");
     return true;
    }
 
    if (args.length < 3) {
-    sharerPlayer.sendMessage(ChatColor.YELLOW + "Usage: /sharehome <add|remove> <player_name> <home_name>");
+    messageManager.sendMessage(sharerPlayer, "sharehome-usage");
     return true;
    }
 
@@ -695,7 +739,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
    OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(targetPlayerName);
    if (!targetPlayer.hasPlayedBefore()) {
-    sharerPlayer.sendMessage(ChatColor.RED + "Player '" + targetPlayerName + "' not found.");
+    messageManager.sendMessage(sharerPlayer, "player-not-found", Map.of("name", targetPlayerName));
     return true;
    }
 
@@ -704,24 +748,24 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
    // Verify home exists and belongs to sharer
    if (getLocation(HOMES_SECTION + "." + sharerUUID.toString(), homePath) == null) {
-    sharerPlayer.sendMessage(ChatColor.RED + "Your personal home '" + homePath + "' not found.");
+    messageManager.sendMessage(sharerPlayer, "home-not-found", Map.of("name", homePath));
     return true;
    }
 
    if ("add".equals(action)) {
     if (addSharedHomePermission(sharerUUID, targetUUID, homePath)) {
-     sharerPlayer.sendMessage(ChatColor.GREEN + "Successfully shared your home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' with " + ChatColor.YELLOW + targetPlayerName + ChatColor.GREEN + ".");
+     messageManager.sendMessage(sharerPlayer, "home-shared", Map.of("name", homePath, "player", targetPlayerName));
     } else {
-     sharerPlayer.sendMessage(ChatColor.YELLOW + "Your home '" + homePath + "' is already shared with " + targetPlayerName + ".");
+     messageManager.sendMessage(sharerPlayer, "home-already-shared", Map.of("name", homePath, "player", targetPlayerName));
     }
    } else if ("remove".equals(action)) {
     if (removeSharedHomePermission(sharerUUID, targetUUID, homePath)) {
-     sharerPlayer.sendMessage(ChatColor.GREEN + "Successfully unshared your home '" + ChatColor.GOLD + homePath + ChatColor.GREEN + "' from " + ChatColor.YELLOW + targetPlayerName + ChatColor.GREEN + ".");
+     messageManager.sendMessage(sharerPlayer, "home-unshared", Map.of("name", homePath, "player", targetPlayerName));
     } else {
-     sharerPlayer.sendMessage(ChatColor.YELLOW + "Your home '" + homePath + "' was not shared with " + targetPlayerName + ".");
+     messageManager.sendMessage(sharerPlayer, "home-not-shared", Map.of("name", homePath, "player", targetPlayerName));
     }
    } else {
-    sharerPlayer.sendMessage(ChatColor.YELLOW + "Usage: /sharehome <add|remove> <player_name> <home_name>");
+    messageManager.sendMessage(sharerPlayer, "sharehome-usage");
    }
    return true;
   }
@@ -931,7 +975,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
   }
   
   // Check if player took damage
-  if (configManager.isCancelOnDamage() && player.getHealth() < player.getMaxHealth()) {
+  if (configManager.isCancelOnDamage() && player.getHealth() < player.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue()) {
    messageManager.sendMessage(player, "teleport-cancelled-damage");
    return;
   }

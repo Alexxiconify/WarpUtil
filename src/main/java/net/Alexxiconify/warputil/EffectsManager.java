@@ -1,7 +1,7 @@
 package net.Alexxiconify.warputil;
 
-import org.bukkit.Effect;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
@@ -41,16 +41,20 @@ public class EffectsManager {
     }
 
     private void playParticleEffect(Location location, String effectName) {
+        if (location.getWorld() == null) return;
+        
         try {
-            Effect effect = Effect.valueOf(effectName.toUpperCase());
-            location.getWorld().playEffect(location, effect, 0);
+            Particle particle = Particle.valueOf(effectName.toUpperCase());
+            location.getWorld().spawnParticle(particle, location, 10);
         } catch (IllegalArgumentException e) {
             // Fallback to default effect
-            location.getWorld().playEffect(location, Effect.SMOKE, 0);
+            location.getWorld().spawnParticle(Particle.SMOKE_NORMAL, location, 10);
         }
     }
 
     private void playSoundEffect(Location location, String soundName) {
+        if (location.getWorld() == null) return;
+        
         try {
             Sound sound = Sound.valueOf(soundName.toUpperCase());
             float volume = (float) plugin.getConfigManager().getSoundVolume();
@@ -65,12 +69,12 @@ public class EffectsManager {
     }
 
     public void playTeleportEffect(Location location) {
-        if (!plugin.getConfigManager().isEffectsEnabled()) {
+        if (!plugin.getConfigManager().isEffectsEnabled() || location.getWorld() == null) {
             return;
         }
 
         // Play portal effect
-        location.getWorld().playEffect(location, Effect.ENDER_SIGNAL, 0);
+        location.getWorld().spawnParticle(Particle.PORTAL, location, 20);
         
         // Play enderman teleport sound
         float volume = (float) plugin.getConfigManager().getSoundVolume();
@@ -84,9 +88,10 @@ public class EffectsManager {
         }
 
         Location location = player.getLocation();
+        if (location.getWorld() == null) return;
         
         // Play smoke effect
-        location.getWorld().playEffect(location, Effect.SMOKE, 0);
+        location.getWorld().spawnParticle(Particle.SMOKE_NORMAL, location, 10);
         
         // Play error sound
         float volume = (float) plugin.getConfigManager().getSoundVolume();
@@ -100,9 +105,10 @@ public class EffectsManager {
         }
 
         Location location = player.getLocation();
+        if (location.getWorld() == null) return;
         
         // Play happy villager effect
-        location.getWorld().playEffect(location, Effect.SMOKE, 0);
+        location.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, location, 10);
         
         // Play success sound
         float volume = (float) plugin.getConfigManager().getSoundVolume();
@@ -116,9 +122,10 @@ public class EffectsManager {
         }
 
         Location location = player.getLocation();
+        if (location.getWorld() == null) return;
         
         // Play redstone effect
-        location.getWorld().playEffect(location, Effect.SMOKE, 0);
+        location.getWorld().spawnParticle(Particle.REDSTONE, location, 10);
         
         // Play cooldown sound
         float volume = (float) plugin.getConfigManager().getSoundVolume();
@@ -132,9 +139,10 @@ public class EffectsManager {
         }
 
         Location location = player.getLocation();
+        if (location.getWorld() == null) return;
         
         // Play emerald effect
-        location.getWorld().playEffect(location, Effect.SMOKE, 0);
+        location.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, location, 10);
         
         // Play money sound
         float volume = (float) plugin.getConfigManager().getSoundVolume();

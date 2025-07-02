@@ -86,7 +86,7 @@ effects:
   # Whether to show teleport effects
   enabled: true
   # Particle effect for teleport start
-  start-effect: "SMOKE"
+  start-effect: "SMOKE_NORMAL"
   # Particle effect for teleport end
   end-effect: "PORTAL"
   # Sound effect for teleport start
