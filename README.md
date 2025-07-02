@@ -223,8 +223,7 @@ mvn clean package
 
 ### Project Structure
 
-```
-src/main/java/net/Alexxiconify/warputil/
+```src/main/java/net/Alexxiconify/warputil/
 ├── NestedWarpsPlugin.java      # Main plugin class
 ├── ConfigurationManager.java    # Configuration management
 ├── MessageManager.java         # Message handling (Adventure API)
@@ -245,6 +244,7 @@ src/main/java/net/Alexxiconify/warputil/
 ### Debug Mode
 
 Enable debug mode in config to get detailed logging:
+
 ```yaml
 general:
   debug: true
