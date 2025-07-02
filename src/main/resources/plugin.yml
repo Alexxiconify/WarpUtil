@@ -2,7 +2,7 @@
 name: NestedWarps
 version: 1.0
 main: net.Alexxiconify.warputil.NestedWarpsPlugin
-api-version: 1.21 # Ensure this matches your server's Minecraft version
+api-version: 1.21
 authors: Alexxiconify
 description: A Minecraft plugin for nested /warp and /home commands, including shared homes.
 
@@ -12,7 +12,7 @@ permissions:
     default: true
   nestedwarps.warp.*:
     description: Allows players to warp to any specific public warp.
-    default: op # Or 'false' if you want to grant specific warps only
+    default: op
   nestedwarps.setwarp:
     description: Allows players to use the /setwarp command.
     default: op
@@ -36,7 +36,7 @@ permissions:
     default: true
   nestedhomes.share:
     description: Allows players to use the /sharehome command to manage shared homes.
-    default: true # Consider changing to 'op' if you want to restrict sharing ability
+    default: true
   nestedwarps.admin:
     description: Allows access to admin commands like /warputil reload and /warputil info.
     default: op

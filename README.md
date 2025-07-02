@@ -2,45 +2,17 @@
 
 A high-performance, feature-rich Minecraft plugin for managing nested warps and homes with extensive customization options, safety features, and economy integration.
 
-## ✨ Features
-
-### 🎯 Core Functionality
+## Features
 
 - **Nested Warps**: Organize warps in folders (e.g., `creative/build1`, `survival/spawn`)
 - **Personal Homes**: Players can set multiple homes with nested organization
 - **Shared Homes**: Share homes with other players
-- **Permission-based Access**: Granular permissions for specific warps and homes
+- **Safety & Security**: Teleport delays, cooldowns, movement cancellation, damage cancellation
+- **Economy Integration**: Full Vault support with configurable costs
+- **Visual & Audio Effects**: Customizable particle and sound effects
+- **Advanced Configuration**: 50+ configuration options
 
-### 🛡️ Safety & Security
-
-- **Teleport Delays**: Configurable delay before teleportation
-- **Cooldowns**: Prevent spam teleporting
-- **Movement Cancellation**: Cancel teleport if player moves too much
-- **Damage Cancellation**: Cancel teleport if player takes damage
-- **Safe Location Checks**: Prevent teleporting into dangerous areas
-- **Cross-world Protection**: Configurable cross-world teleport permissions
-
-### 💰 Economy Integration
-
-- **Vault Support**: Full integration with Vault economy plugins
-- **Configurable Costs**: Set costs for setting warps/homes and teleporting
-- **Refund System**: Automatic refunds when deleting warps/homes
-- **Cost Customization**: Different costs for different actions
-
-### 🎨 Visual & Audio Effects
-
-- **Particle Effects**: Customizable particle effects for teleportation
-- **Sound Effects**: Configurable sound effects
-- **Modern API**: Uses latest Bukkit particle and sound systems
-
-### 🔧 Advanced Configuration
-
-- **Comprehensive Settings**: 50+ configuration options
-- **Message Customization**: Fully customizable messages with color codes
-- **Permission Granularity**: Fine-grained permission control
-- **Integration Support**: WorldGuard, WorldEdit, PlaceholderAPI support
-
-## 📋 Commands
+## Commands
 
 ### Warp Commands
 
@@ -62,7 +34,7 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - `/warputil reload` - Reload configuration
 - `/warputil info` - Show plugin information
 
-## 🔐 Permissions
+## Permissions
 
 ### Warp Permissions
 
@@ -73,7 +45,6 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - `nestedwarps.delwarp` - Delete warps
 - `nestedwarps.list` - List warps
 - `nestedwarps.crossworld` - Cross-world warp teleportation
-- `nestedwarps.bypass.regions` - Bypass region protection
 
 ### Home Permissions
 
@@ -88,22 +59,18 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 
 - `nestedwarps.admin` - Access admin commands
 
-## ⚙️ Configuration
+## Configuration
 
 The plugin includes extensive configuration options in `config.yml`:
 
-### General Settings
-
 ```yaml
+# General Settings
 general:
   debug: false
   language: "en"
   auto-save: true
-```
 
-### Teleport Settings
-
-```yaml
+# Teleport Settings
 teleport:
   delay: 3                    # Teleport delay in seconds
   cooldown: 5                 # Cooldown between teleports
@@ -111,11 +78,8 @@ teleport:
   cancel-on-movement: true    # Cancel on movement
   movement-threshold: 0.5     # Movement threshold
   allow-cross-world: true     # Allow cross-world teleports
-```
 
-### Economy Settings
-
-```yaml
+# Economy Settings
 economy:
   enabled: false              # Enable economy integration
   warp-cost: 100.0           # Cost to set a warp
@@ -124,11 +88,8 @@ economy:
   home-teleport-cost: 5.0    # Cost to teleport to home
   refund-on-delete: true     # Refund on deletion
   refund-percentage: 0.5     # Refund percentage
-```
 
-### Effects Settings
-
-```yaml
+# Effects Settings
 effects:
   enabled: true              # Enable effects
   start-effect: "SMOKE_NORMAL"      # Start teleport effect
@@ -137,11 +98,8 @@ effects:
   end-sound: "ENTITY_ENDERMAN_TELEPORT"
   sound-volume: 0.5
   sound-pitch: 1.0
-```
 
-### Safety Settings
-
-```yaml
+# Safety Settings
 safety:
   check-safe-location: true   # Check for safe locations
   max-fall-distance: 10       # Maximum fall distance
@@ -151,7 +109,7 @@ safety:
   prevent-void-teleport: true   # Prevent teleporting into void
 ```
 
-## 🎨 Message Customization
+## Message Customization
 
 All messages can be customized in `messages.yml` with color codes and placeholders:
 
@@ -162,7 +120,7 @@ messages:
   home-shared: "&aSuccessfully shared your home &6%name% &awith &6%player%&a."
 ```
 
-## 🔌 Integrations
+## Integrations
 
 ### Supported Plugins
 
@@ -171,68 +129,36 @@ messages:
 - **WorldEdit**: Selection-based teleportation
 - **PlaceholderAPI**: Placeholder support
 
-### Integration Configuration
-
-```yaml
-integrations:
-  worldguard:
-    enabled: false
-    check-regions: true
-    allow-in-protected: false
-  worldedit:
-    enabled: false
-    allow-selection: true
-  placeholderapi:
-    enabled: false
-```
-
-## 🚀 Performance Optimizations
-
-- **Efficient Data Structures**: Uses ConcurrentHashMap for thread-safe operations
-- **Caching**: Configuration and message caching for better performance
-- **Async Operations**: Cooldown cleanup runs asynchronously
-- **Memory Management**: Automatic cleanup of expired cooldowns
-- **Optimized Algorithms**: Efficient path finding and location validation
-- **Modern APIs**: Uses latest Bukkit APIs for optimal performance
-
-## 🛠️ Installation
+## Installation
 
 1. **Download** the latest JAR file
 2. **Place** it in your server's `plugins` folder
-3. **Install Dependencies** (optional):
-   - Vault for economy integration
-   - WorldGuard for region protection
-   - WorldEdit for selection features
+3. **Install Dependencies** (optional): Vault, WorldGuard, WorldEdit, PlaceholderAPI
 4. **Restart** your server
 5. **Configure** permissions and settings as needed
 
-## 📊 Requirements
+## Requirements
 
 - **Java**: 21+
 - **Server**: Paper/Spigot 1.21+
 - **API**: Bukkit API
 - **Optional**: Vault, WorldGuard, WorldEdit, PlaceholderAPI
 
-## 🔧 Development
-
-### Building from Source
+## Building
 
 ```bash
 mvn clean package
 ```
 
-### Project Structure
+## Performance Optimizations
 
-```src/main/java/net/Alexxiconify/warputil/
-├── NestedWarpsPlugin.java      # Main plugin class
-├── ConfigurationManager.java    # Configuration management
-├── MessageManager.java         # Message handling (Adventure API)
-├── EconomyManager.java         # Economy integration
-├── SafetyManager.java          # Safety checks
-└── EffectsManager.java         # Visual/audio effects (Particle API)
-```
+- **Efficient Data Structures**: Uses ConcurrentHashMap for thread-safe operations
+- **Caching**: Configuration and message caching for better performance
+- **Async Operations**: Cooldown cleanup runs asynchronously
+- **Memory Management**: Automatic cleanup of expired cooldowns
+- **Modern APIs**: Uses latest Bukkit APIs for optimal performance
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -250,39 +176,6 @@ general:
   debug: true
 ```
 
-## 📈 Changelog
+## License
 
-### v1.0.0 (Current)
-
-- ✨ Complete rewrite with modular architecture
-- 🛡️ Added comprehensive safety features
-- 💰 Economy integration with Vault
-- 🎨 Visual and audio effects system (Particle API)
-- ⚙️ Extensive configuration options
-- 🔧 Message customization system (Adventure API)
-- 🚀 Performance optimizations
-- 🔌 Plugin integration support
-- 🔧 Modern API usage (no deprecated methods)
-
-### v0.1.0 (Previous)
-
-- Basic warp and home functionality
-- Nested path support
-- Home sharing system
-
-## 🤝 Support
-
-- **Issues**: Create an issue on the project repository
-- **Documentation**: Check the wiki for detailed guides
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Bukkit/Spigot team for the excellent API
-- Vault team for economy integration
-- WorldGuard team for region protection
-- Adventure API team for modern text handling
-- All contributors and testers
+This project is licensed under the MIT License.

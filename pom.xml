@@ -10,18 +10,16 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source> <!-- Updated to Java 21 -->
-        <maven.compiler.target>21</maven.compiler.target> <!-- Updated to Java 21 -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <repositories>
-        <!-- SpigotMC Repository for Spigot API -->
         <repository>
             <id>spigotmc-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
-        <!-- PaperMC Repository for Paper API (if using Paper-specific features or latest API) -->
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
@@ -29,18 +27,16 @@
     </repositories>
 
     <dependencies>
-        <!-- Paper API Dependency -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version> <!-- IMPORTANT: Change this to your server's exact API version -->
+            <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Optional: If you use @NotNull, add org.jetbrains.annotations -->
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>23.0.0</version> <!-- Use a recent version -->
+            <version>23.0.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
@@ -48,7 +44,6 @@
     <build>
         <defaultGoal>clean package</defaultGoal>
         <plugins>
-            <!-- Maven Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -56,24 +51,18 @@
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
-                    <!-- Explicitly set the Java executable to avoid 'system modules path not set' warning -->
-                    <!--suppress UnresolvedMavenProperty -->
-                    <executable>${java.home}/bin/javac</executable> <!-- Corrected property to java.home -->
+                    <executable>${java.home}/bin/javac</executable>
                 </configuration>
             </plugin>
-            <!-- Maven Jar Plugin: Creates the initial JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
-                <!-- Removed the <configuration> with <classifier>original</classifier>
-                     to ensure the default main artifact is produced for shading. -->
             </plugin>
-            <!-- Maven Shade Plugin: To bundle external libraries and create the final plugin JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.2</version> <!-- Updated to a newer version for Java 21 compatibility -->
+                <version>3.5.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -82,22 +71,15 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-
                             <artifactSet>
                                 <includes>
-                                    <!-- This tells shade to include your own plugin classes and annotations,
-                                         as well as any other necessary runtime dependencies -->
                                     <include>net.Alexxiconify:NestedWarps</include>
                                     <include>org.jetbrains:annotations</include>
-                                    <!-- Add other runtime dependencies here if you have any -->
                                 </includes>
                                 <excludes>
-                                    <!-- Exclude 'provided' dependencies like Paper API from being shaded -->
                                     <exclude>io.papermc.paper:paper-api</exclude>
                                 </excludes>
                             </artifactSet>
-
-                            <!-- Add filters to handle overlapping resources -->
                             <filters>
                                 <filter>
                                     <artifact>org.jetbrains:annotations</artifact>
@@ -106,14 +88,11 @@
                                     </excludes>
                                 </filter>
                             </filters>
-
-                            <!-- Relocate classes to avoid conflicts with other plugins -->
                             <relocations>
                                 <relocation>
                                     <pattern>org.jetbrains.annotations</pattern>
                                     <shadedPattern>net.Alexxiconify.warputil.lib.annotations</shadedPattern>
                                 </relocation>
-                                <!-- Add other relocations for any bundled dependencies to avoid conflicts -->
                             </relocations>
                         </configuration>
                     </execution>
@@ -121,7 +100,6 @@
             </plugin>
         </plugins>
         <resources>
-            <!-- Important: Ensure plugin.yml and paper-plugin.yml are copied to the root of the JAR -->
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>

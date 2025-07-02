@@ -17,7 +17,6 @@ public class ConfigurationManager {
         this.config = plugin.getConfig();
     }
 
-    // General settings
     public boolean isDebug() {
         return config.getBoolean("general.debug", false);
     }
@@ -30,7 +29,6 @@ public class ConfigurationManager {
         return config.getBoolean("general.auto-save", true);
     }
 
-    // Teleport settings
     public int getTeleportDelay() {
         return config.getInt("teleport.delay", 3);
     }
@@ -63,7 +61,6 @@ public class ConfigurationManager {
         return config.getString("teleport.cross-world-permission", "nestedwarps.crossworld");
     }
 
-    // Warp settings
     public int getMaxWarps() {
         return config.getInt("warps.max-warps", 50);
     }
@@ -88,7 +85,6 @@ public class ConfigurationManager {
         return config.getBoolean("warps.show-count", true);
     }
 
-    // Home settings
     public int getMaxHomes() {
         return config.getInt("homes.max-homes", 10);
     }
@@ -113,7 +109,6 @@ public class ConfigurationManager {
         return config.getString("homes.cross-world-permission", "nestedhomes.crossworld");
     }
 
-    // Economy settings
     public boolean isEconomyEnabled() {
         return config.getBoolean("economy.enabled", false);
     }
@@ -142,7 +137,6 @@ public class ConfigurationManager {
         return config.getDouble("economy.refund-percentage", 0.5);
     }
 
-    // Effects settings
     public boolean isEffectsEnabled() {
         return config.getBoolean("effects.enabled", true);
     }
@@ -171,7 +165,6 @@ public class ConfigurationManager {
         return config.getDouble("effects.sound-pitch", 1.0);
     }
 
-    // Messages settings
     public String getMessagePrefix() {
         return config.getString("messages.prefix", "&8[&bWarpUtil&8] ");
     }
@@ -188,7 +181,6 @@ public class ConfigurationManager {
         return config.getInt("messages.title-duration", 60);
     }
 
-    // Safety settings
     public boolean isCheckSafeLocation() {
         return config.getBoolean("safety.check-safe-location", true);
     }
@@ -213,7 +205,6 @@ public class ConfigurationManager {
         return config.getBoolean("safety.prevent-void-teleport", true);
     }
 
-    // Integration settings
     public boolean isWorldGuardEnabled() {
         return config.getBoolean("integrations.worldguard.enabled", false);
     }
@@ -238,7 +229,6 @@ public class ConfigurationManager {
         return config.getBoolean("integrations.placeholderapi.enabled", false);
     }
 
-    // Utility methods
     public ConfigurationSection getSection(String path) {
         return config.getConfigurationSection(path);
     }
