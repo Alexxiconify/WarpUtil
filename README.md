@@ -1,20 +1,42 @@
-# WarpUtil - Nested Warps & Homes Plugin
+# WarpUtil - Advanced Nested Warps & Homes Plugin
 
-A high-performance Minecraft plugin for managing nested warps and homes with sharing capabilities.
+A high-performance, feature-rich Minecraft plugin for managing nested warps and homes with extensive customization options, safety features, and economy integration.
 
-## Features
+## ✨ Features
 
-### Warp System
+### 🎯 Core Functionality
 - **Nested Warps**: Organize warps in folders (e.g., `creative/build1`, `survival/spawn`)
-- **Permission-based Access**: Granular permissions for specific warps
-- **Commands**: `/warp`, `/setwarp`, `/delwarp`, `/warps`
-
-### Home System
 - **Personal Homes**: Players can set multiple homes with nested organization
 - **Shared Homes**: Share homes with other players
-- **Commands**: `/home`, `/sethome`, `/delhome`, `/homes`, `/sharehome`
+- **Permission-based Access**: Granular permissions for specific warps and homes
 
-## Commands
+### 🛡️ Safety & Security
+- **Teleport Delays**: Configurable delay before teleportation
+- **Cooldowns**: Prevent spam teleporting
+- **Movement Cancellation**: Cancel teleport if player moves too much
+- **Damage Cancellation**: Cancel teleport if player takes damage
+- **Safe Location Checks**: Prevent teleporting into dangerous areas
+- **Cross-world Protection**: Configurable cross-world teleport permissions
+
+### 💰 Economy Integration
+- **Vault Support**: Full integration with Vault economy plugins
+- **Configurable Costs**: Set costs for setting warps/homes and teleporting
+- **Refund System**: Automatic refunds when deleting warps/homes
+- **Cost Customization**: Different costs for different actions
+
+### 🎨 Visual & Audio Effects
+- **Particle Effects**: Customizable particle effects for teleportation
+- **Sound Effects**: Configurable sound effects
+- **Action Bars**: Important messages displayed in action bars
+- **Title Support**: Optional title notifications
+
+### 🔧 Advanced Configuration
+- **Comprehensive Settings**: 50+ configuration options
+- **Message Customization**: Fully customizable messages with color codes
+- **Permission Granularity**: Fine-grained permission control
+- **Integration Support**: WorldGuard, WorldEdit, PlaceholderAPI support
+
+## 📋 Commands
 
 ### Warp Commands
 - `/warp <name>` - Teleport to a warp
@@ -29,7 +51,11 @@ A high-performance Minecraft plugin for managing nested warps and homes with sha
 - `/homes` - List all homes (personal and shared)
 - `/sharehome <add|remove> <player> <home>` - Manage home sharing
 
-## Permissions
+### Admin Commands
+- `/warputil reload` - Reload configuration
+- `/warputil info` - Show plugin information
+
+## 🔐 Permissions
 
 ### Warp Permissions
 - `nestedwarps.warp` - Use warp commands
@@ -38,6 +64,8 @@ A high-performance Minecraft plugin for managing nested warps and homes with sha
 - `nestedwarps.setwarp` - Set warps
 - `nestedwarps.delwarp` - Delete warps
 - `nestedwarps.list` - List warps
+- `nestedwarps.crossworld` - Cross-world warp teleportation
+- `nestedwarps.bypass.regions` - Bypass region protection
 
 ### Home Permissions
 - `nestedhomes.home` - Use home commands
@@ -45,62 +73,191 @@ A high-performance Minecraft plugin for managing nested warps and homes with sha
 - `nestedhomes.delhome` - Delete homes
 - `nestedhomes.list` - List homes
 - `nestedhomes.share` - Share homes
+- `nestedhomes.crossworld` - Cross-world home teleportation
 
-## Configuration
+### Admin Permissions
+- `nestedwarps.admin` - Access admin commands
 
-The plugin automatically generates a `config.yml` file with example warps and homes. The structure supports nested organization:
+## ⚙️ Configuration
 
+The plugin includes extensive configuration options in `config.yml`:
+
+### General Settings
 ```yaml
-warps:
-  hub:
-    world: world
-    x: 0.0
-    y: 64.0
-    z: 0.0
-    yaw: 0.0
-    pitch: 0.0
-  creative:
-    build1:
-      world: world
-      x: 100.5
-      y: 70.0
-      z: -50.5
-      yaw: 90.0
-      pitch: 45.0
-
-homes:
-  "player-uuid":
-    mybase:
-      world: world_survival
-      x: 123.45
-      y: 64.0
-      z: 67.89
-      yaw: 180.0
-      pitch: 0.0
+general:
+  debug: false
+  language: "en"
+  auto-save: true
 ```
 
-## Optimizations
+### Teleport Settings
+```yaml
+teleport:
+  delay: 3                    # Teleport delay in seconds
+  cooldown: 5                 # Cooldown between teleports
+  cancel-on-damage: true      # Cancel on damage
+  cancel-on-movement: true    # Cancel on movement
+  movement-threshold: 0.5     # Movement threshold
+  allow-cross-world: true     # Allow cross-world teleports
+```
 
-This plugin has been optimized for:
-- **Performance**: Reduced code duplication and improved efficiency
-- **Memory Usage**: Streamlined data structures and caching
-- **Maintainability**: Clean, modular code structure
-- **Error Handling**: Robust error checking and logging
-- **Tab Completion**: Intelligent command completion for nested paths
+### Economy Settings
+```yaml
+economy:
+  enabled: false              # Enable economy integration
+  warp-cost: 100.0           # Cost to set a warp
+  home-cost: 50.0            # Cost to set a home
+  warp-teleport-cost: 10.0   # Cost to teleport to warp
+  home-teleport-cost: 5.0    # Cost to teleport to home
+  refund-on-delete: true     # Refund on deletion
+  refund-percentage: 0.5     # Refund percentage
+```
 
-## Requirements
+### Effects Settings
+```yaml
+effects:
+  enabled: true              # Enable effects
+  start-effect: "SMOKE"      # Start teleport effect
+  end-effect: "PORTAL"       # End teleport effect
+  start-sound: "ENTITY_ENDERMAN_TELEPORT"
+  end-sound: "ENTITY_ENDERMAN_TELEPORT"
+  sound-volume: 0.5
+  sound-pitch: 1.0
+```
 
-- Java 21+
-- Paper/Spigot 1.20.1+
-- Bukkit API
+### Safety Settings
+```yaml
+safety:
+  check-safe-location: true   # Check for safe locations
+  max-fall-distance: 10       # Maximum fall distance
+  prevent-block-teleport: true # Prevent teleporting into blocks
+  prevent-lava-teleport: true  # Prevent teleporting into lava
+  prevent-water-teleport: false # Prevent teleporting into water
+  prevent-void-teleport: true   # Prevent teleporting into void
+```
 
-## Installation
+## 🎨 Message Customization
 
-1. Download the latest JAR file
-2. Place it in your server's `plugins` folder
-3. Restart your server
-4. Configure permissions as needed
+All messages can be customized in `messages.yml`:
 
-## Support
+```yaml
+messages:
+  teleport-success: "&aSuccessfully teleported to %type%: &6%name%"
+  warp-set: "&aWarp &6%name% &aset successfully!"
+  home-shared: "&aSuccessfully shared your home &6%name% &awith &6%player%&a."
+```
 
-For issues or feature requests, please create an issue on the project repository.
+## 🔌 Integrations
+
+### Supported Plugins
+- **Vault**: Economy integration
+- **WorldGuard**: Region protection
+- **WorldEdit**: Selection-based teleportation
+- **PlaceholderAPI**: Placeholder support
+
+### Integration Configuration
+```yaml
+integrations:
+  worldguard:
+    enabled: false
+    check-regions: true
+    allow-in-protected: false
+  worldedit:
+    enabled: false
+    allow-selection: true
+  placeholderapi:
+    enabled: false
+```
+
+## 🚀 Performance Optimizations
+
+- **Efficient Data Structures**: Uses ConcurrentHashMap for thread-safe operations
+- **Caching**: Configuration and message caching for better performance
+- **Async Operations**: Cooldown cleanup runs asynchronously
+- **Memory Management**: Automatic cleanup of expired cooldowns
+- **Optimized Algorithms**: Efficient path finding and location validation
+
+## 🛠️ Installation
+
+1. **Download** the latest JAR file
+2. **Place** it in your server's `plugins` folder
+3. **Install Dependencies** (optional):
+   - Vault for economy integration
+   - WorldGuard for region protection
+   - WorldEdit for selection features
+4. **Restart** your server
+5. **Configure** permissions and settings as needed
+
+## 📊 Requirements
+
+- **Java**: 21+
+- **Server**: Paper/Spigot 1.20.1+
+- **API**: Bukkit API
+- **Optional**: Vault, WorldGuard, WorldEdit, PlaceholderAPI
+
+## 🔧 Development
+
+### Building from Source
+```bash
+mvn clean package
+```
+
+### Project Structure
+```
+src/main/java/net/Alexxiconify/warputil/
+├── NestedWarpsPlugin.java      # Main plugin class
+├── ConfigurationManager.java    # Configuration management
+├── MessageManager.java         # Message handling
+├── EconomyManager.java         # Economy integration
+├── SafetyManager.java          # Safety checks
+└── EffectsManager.java         # Visual/audio effects
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+1. **Economy not working**: Ensure Vault is installed and economy plugin is loaded
+2. **Permissions not working**: Check permission nodes and group configurations
+3. **Cross-world teleports failing**: Verify cross-world permissions are set
+4. **Effects not showing**: Check if effects are enabled in config
+
+### Debug Mode
+Enable debug mode in config to get detailed logging:
+```yaml
+general:
+  debug: true
+```
+
+## 📈 Changelog
+
+### v2.0.0 (Current)
+- ✨ Complete rewrite with modular architecture
+- 🛡️ Added comprehensive safety features
+- 💰 Economy integration with Vault
+- 🎨 Visual and audio effects system
+- ⚙️ Extensive configuration options
+- 🔧 Message customization system
+- 🚀 Performance optimizations
+- 🔌 Plugin integration support
+
+### v1.0.0 (Previous)
+- Basic warp and home functionality
+- Nested path support
+- Home sharing system
+
+## 🤝 Support
+
+- **Issues**: Create an issue on the project repository
+- **Discord**: Join our Discord server for support
+- **Documentation**: Check the wiki for detailed guides
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Bukkit/Spigot team for the excellent API
+- Vault team for economy integration
+- WorldGuard team for region protection
+- All contributors and testers

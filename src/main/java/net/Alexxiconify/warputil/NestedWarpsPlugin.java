@@ -4,7 +4,7 @@ package net.Alexxiconify.warputil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer; // For getting UUID of offline players
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +14,14 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.SimplePluginManager;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.Effect;
+import org.bukkit.Sound;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,8 +32,10 @@ import java.util.UUID;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Arrays; // Added for Arrays.copyOfRange
+import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Objects;
 
 @SuppressWarnings("ALL")
 public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
@@ -35,18 +45,48 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
  private static final String SHARED_HOMES_SECTION = "shared_homes";
  private static final String[] LOCATION_KEYS = {"world", "x", "y", "z", "yaw", "pitch"};
 
+ // Data storage
+ private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+ private final Map<UUID, TeleportRequest> pendingTeleports = new ConcurrentHashMap<>();
+ private final Map<UUID, Location> lastLocations = new ConcurrentHashMap<>();
+
+ // Configuration cache
+ private ConfigurationManager configManager;
+ private MessageManager messageManager;
+ private EconomyManager economyManager;
+ private SafetyManager safetyManager;
+ private EffectsManager effectsManager;
+
  @Override
  public void onEnable() {
-  saveDefaultConfig();
+  // Initialize managers
+  configManager = new ConfigurationManager(this);
+  messageManager = new MessageManager(this);
+  economyManager = new EconomyManager(this);
+  safetyManager = new SafetyManager(this);
+  effectsManager = new EffectsManager(this);
 
-  // Register commands programmatically
+  // Save default config and load settings
+  saveDefaultConfig();
+  configManager.reloadConfig();
+  messageManager.reloadMessages();
+
+  // Register commands
   registerCommands();
+
+  // Start cooldown cleanup task
+  startCooldownCleanupTask();
 
   getLogger().info("NestedWarps plugin enabled!");
  }
 
  @Override
  public void onDisable() {
+  // Cancel all pending teleports
+  pendingTeleports.clear();
+  cooldowns.clear();
+  lastLocations.clear();
+
   getLogger().info("NestedWarps plugin disabled!");
  }
 
@@ -78,6 +118,10 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
                  "nestedhomes.list", new HomesCommandExecutor(), null);
   registerCommand(commandMap, "sharehome", "Shares a home", "/sharehome <add|remove> <player> <home>", 
                  "nestedhomes.share", new ShareHomeCommandExecutor(), new ShareHomeTabCompleter());
+
+  // Admin commands
+  registerCommand(commandMap, "warputil", "Admin commands", "/warputil <reload|info>", 
+                 "nestedwarps.admin", new AdminCommandExecutor(), null);
  }
 
    private void registerCommand(CommandMap commandMap, String name, String description, String usage, 
@@ -96,6 +140,17 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    cmd.setPermission(permission);
    cmd.setPermissionMessage(ChatColor.RED + "You do not have permission to use this command.");
    commandMap.register("nestedwarps", cmd);
+  }
+
+  private void startCooldownCleanupTask() {
+   new BukkitRunnable() {
+    @Override
+    public void run() {
+     long currentTime = System.currentTimeMillis();
+     cooldowns.entrySet().removeIf(entry -> 
+        currentTime - entry.getValue() > configManager.getCooldown() * 1000L);
+    }
+   }.runTaskTimerAsynchronously(this, 20L * 60, 20L * 60); // Run every minute
   }
 
   // Location management methods
@@ -299,8 +354,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
 
    Location warpLocation = getWarpLocation(warpPath);
    if (warpLocation != null) {
-    player.teleport(warpLocation);
-    player.sendMessage(ChatColor.GREEN + "Teleported to warp: " + ChatColor.GOLD + warpPath);
+    initiateTeleport(player, warpLocation, "warp", warpPath);
    } else {
     player.sendMessage(ChatColor.RED + "Warp '" + warpPath + "' not found.");
    }
@@ -432,10 +486,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    String homePath = String.join("/", args);
    Location homeLocation = getHomeLocation(player.getUniqueId(), homePath);
    if (homeLocation != null) {
-    player.teleport(homeLocation);
-    boolean isPersonal = getConfig().contains(HOMES_SECTION + "." + player.getUniqueId().toString() + "." + homePath.replace("/", "."));
-    String message = isPersonal ? "personal home" : "shared home";
-    player.sendMessage(ChatColor.GREEN + "Teleported to your " + message + ": " + ChatColor.GOLD + homePath);
+    initiateTeleport(player, homeLocation, "home", homePath);
    } else {
     player.sendMessage(ChatColor.RED + "Home '" + homePath + "' not found or you do not have access to it.");
    }
@@ -817,5 +868,202 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
    return true;
   }
   return false;
+ }
+
+ // Teleport management
+ public void initiateTeleport(Player player, Location destination, String type, String name) {
+  UUID playerId = player.getUniqueId();
+  
+  // Check cooldown
+  if (isOnCooldown(playerId)) {
+   long remaining = getCooldownRemaining(playerId);
+   messageManager.sendMessage(player, "cooldown", Map.of("time", String.valueOf(remaining)));
+   return;
+  }
+  
+  // Check economy
+  if (!economyManager.canAffordTeleport(player, type)) {
+   messageManager.sendMessage(player, "insufficient-funds");
+   return;
+  }
+  
+  // Check safety
+  if (!safetyManager.isSafeLocation(destination)) {
+   messageManager.sendMessage(player, "unsafe-location");
+   return;
+  }
+  
+  // Check cross-world permission
+  if (!safetyManager.canTeleportCrossWorld(player, player.getWorld(), destination.getWorld(), type)) {
+   messageManager.sendMessage(player, "cross-world-denied");
+   return;
+  }
+  
+  // Store initial location
+  lastLocations.put(playerId, player.getLocation());
+  
+  // Create teleport request
+  TeleportRequest request = new TeleportRequest(destination, type, name, System.currentTimeMillis());
+  pendingTeleports.put(playerId, request);
+  
+  // Start teleport delay
+  int delay = configManager.getTeleportDelay();
+  if (delay > 0) {
+   messageManager.sendMessage(player, "teleport-starting", Map.of("time", String.valueOf(delay)));
+   effectsManager.playStartEffect(player);
+   
+   new BukkitRunnable() {
+    @Override
+    public void run() {
+     if (pendingTeleports.containsKey(playerId)) {
+      TeleportRequest currentRequest = pendingTeleports.get(playerId);
+      if (currentRequest.equals(request)) {
+       executeTeleport(player, destination, type, name);
+      }
+     }
+    }
+   }.runTaskLater(this, delay * 20L);
+  } else {
+   executeTeleport(player, destination, type, name);
+  }
+ }
+
+ private void executeTeleport(Player player, Location destination, String type, String name) {
+  UUID playerId = player.getUniqueId();
+  
+  // Remove from pending teleports
+  pendingTeleports.remove(playerId);
+  
+  // Check if player is still valid
+  if (!player.isOnline()) return;
+  
+  // Check if player moved too much
+  Location initialLocation = lastLocations.get(playerId);
+  if (initialLocation != null && configManager.isCancelOnMovement()) {
+   double distance = player.getLocation().distance(initialLocation);
+   if (distance > configManager.getMovementThreshold()) {
+    messageManager.sendMessage(player, "teleport-cancelled-movement");
+    return;
+   }
+  }
+  
+  // Check if player took damage
+  if (configManager.isCancelOnDamage() && player.getHealth() < player.getMaxHealth()) {
+   messageManager.sendMessage(player, "teleport-cancelled-damage");
+   return;
+  }
+  
+  // Charge economy
+  if (!economyManager.chargeTeleport(player, type)) {
+   messageManager.sendMessage(player, "economy-error");
+   return;
+  }
+  
+  // Perform teleport
+  player.teleport(destination);
+  
+  // Set cooldown
+  setCooldown(playerId);
+  
+  // Send success message
+  Map<String, String> placeholders = Map.of("type", type, "name", name);
+  messageManager.sendMessage(player, "teleport-success", placeholders);
+  
+  // Play effects
+  effectsManager.playEndEffect(player);
+  
+  // Clear stored location
+  lastLocations.remove(playerId);
+ }
+
+ public void cancelTeleport(UUID playerId) {
+  pendingTeleports.remove(playerId);
+  lastLocations.remove(playerId);
+ }
+
+ private boolean isOnCooldown(UUID playerId) {
+  if (!cooldowns.containsKey(playerId)) return false;
+  long cooldownTime = configManager.getCooldown() * 1000L;
+  return System.currentTimeMillis() - cooldowns.get(playerId) < cooldownTime;
+ }
+
+ private long getCooldownRemaining(UUID playerId) {
+  if (!cooldowns.containsKey(playerId)) return 0;
+  long cooldownTime = configManager.getCooldown() * 1000L;
+  long elapsed = System.currentTimeMillis() - cooldowns.get(playerId);
+  return Math.max(0, (cooldownTime - elapsed) / 1000L);
+ }
+
+ private void setCooldown(UUID playerId) {
+  cooldowns.put(playerId, System.currentTimeMillis());
+ }
+
+ // Getters for managers
+ public ConfigurationManager getConfigManager() { return configManager; }
+ public MessageManager getMessageManager() { return messageManager; }
+ public EconomyManager getEconomyManager() { return economyManager; }
+ public SafetyManager getSafetyManager() { return safetyManager; }
+ public EffectsManager getEffectsManager() { return effectsManager; }
+
+ // Command Executors
+ private class AdminCommandExecutor implements CommandExecutor {
+  @Override
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+   if (args.length == 0) {
+    messageManager.sendMessage(sender, "admin-usage");
+    return true;
+   }
+
+   String subCommand = args[0].toLowerCase();
+   switch (subCommand) {
+    case "reload":
+     configManager.reloadConfig();
+     messageManager.reloadMessages();
+     messageManager.sendMessage(sender, "config-reloaded");
+     break;
+    case "info":
+     messageManager.sendMessage(sender, "plugin-info", Map.of(
+        "version", getDescription().getVersion(),
+        "warps", String.valueOf(getAllWarpPaths().size()),
+        "players", String.valueOf(Bukkit.getOnlinePlayers().size())
+     ));
+     break;
+    default:
+     messageManager.sendMessage(sender, "admin-usage");
+     break;
+   }
+   return true;
+  }
+ }
+
+ // Inner classes for data structures
+ private static class TeleportRequest {
+  private final Location destination;
+  private final String type;
+  private final String name;
+  private final long timestamp;
+
+  public TeleportRequest(Location destination, String type, String name, long timestamp) {
+   this.destination = destination;
+   this.type = type;
+   this.name = name;
+   this.timestamp = timestamp;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+   if (this == obj) return true;
+   if (obj == null || getClass() != obj.getClass()) return false;
+   TeleportRequest that = (TeleportRequest) obj;
+   return timestamp == that.timestamp && 
+          Objects.equals(destination, that.destination) && 
+          Objects.equals(type, that.type) && 
+          Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode() {
+   return Objects.hash(destination, type, name, timestamp);
+  }
  }
 }
