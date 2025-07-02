@@ -1,4 +1,4 @@
-# WarpUtil - Advanced Nested Warps & Homes Plugin
+# NestedWarps - Advanced Nested Warps & Homes Plugin
 
 A high-performance, feature-rich Minecraft plugin for managing nested warps and homes with extensive customization options, safety features, and economy integration.
 
@@ -27,8 +27,7 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 ### 🎨 Visual & Audio Effects
 - **Particle Effects**: Customizable particle effects for teleportation
 - **Sound Effects**: Configurable sound effects
-- **Action Bars**: Important messages displayed in action bars
-- **Title Support**: Optional title notifications
+- **Modern API**: Uses latest Bukkit particle and sound systems
 
 ### 🔧 Advanced Configuration
 - **Comprehensive Settings**: 50+ configuration options
@@ -117,7 +116,7 @@ economy:
 ```yaml
 effects:
   enabled: true              # Enable effects
-  start-effect: "SMOKE"      # Start teleport effect
+  start-effect: "SMOKE_NORMAL"      # Start teleport effect
   end-effect: "PORTAL"       # End teleport effect
   start-sound: "ENTITY_ENDERMAN_TELEPORT"
   end-sound: "ENTITY_ENDERMAN_TELEPORT"
@@ -138,7 +137,7 @@ safety:
 
 ## 🎨 Message Customization
 
-All messages can be customized in `messages.yml`:
+All messages can be customized in `messages.yml` with color codes and placeholders:
 
 ```yaml
 messages:
@@ -176,6 +175,7 @@ integrations:
 - **Async Operations**: Cooldown cleanup runs asynchronously
 - **Memory Management**: Automatic cleanup of expired cooldowns
 - **Optimized Algorithms**: Efficient path finding and location validation
+- **Modern APIs**: Uses latest Bukkit APIs for optimal performance
 
 ## 🛠️ Installation
 
@@ -191,7 +191,7 @@ integrations:
 ## 📊 Requirements
 
 - **Java**: 21+
-- **Server**: Paper/Spigot 1.20.1+
+- **Server**: Paper/Spigot 1.21+
 - **API**: Bukkit API
 - **Optional**: Vault, WorldGuard, WorldEdit, PlaceholderAPI
 

@@ -33,7 +33,6 @@ public class SafetyManager {
         // Check the block at the teleport location
         Block teleportBlock = world.getBlockAt(x, y, z);
         Block blockAbove = world.getBlockAt(x, y + 1, z);
-        Block blockBelow = world.getBlockAt(x, y - 1, z);
 
         // Check if teleporting into a solid block
         if (plugin.getConfigManager().isPreventBlockTeleport() && teleportBlock.getType().isSolid()) {
