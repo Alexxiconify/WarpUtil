@@ -5,12 +5,14 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 ## ✨ Features
 
 ### 🎯 Core Functionality
+
 - **Nested Warps**: Organize warps in folders (e.g., `creative/build1`, `survival/spawn`)
 - **Personal Homes**: Players can set multiple homes with nested organization
 - **Shared Homes**: Share homes with other players
 - **Permission-based Access**: Granular permissions for specific warps and homes
 
 ### 🛡️ Safety & Security
+
 - **Teleport Delays**: Configurable delay before teleportation
 - **Cooldowns**: Prevent spam teleporting
 - **Movement Cancellation**: Cancel teleport if player moves too much
@@ -19,17 +21,20 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - **Cross-world Protection**: Configurable cross-world teleport permissions
 
 ### 💰 Economy Integration
+
 - **Vault Support**: Full integration with Vault economy plugins
 - **Configurable Costs**: Set costs for setting warps/homes and teleporting
 - **Refund System**: Automatic refunds when deleting warps/homes
 - **Cost Customization**: Different costs for different actions
 
 ### 🎨 Visual & Audio Effects
+
 - **Particle Effects**: Customizable particle effects for teleportation
 - **Sound Effects**: Configurable sound effects
 - **Modern API**: Uses latest Bukkit particle and sound systems
 
 ### 🔧 Advanced Configuration
+
 - **Comprehensive Settings**: 50+ configuration options
 - **Message Customization**: Fully customizable messages with color codes
 - **Permission Granularity**: Fine-grained permission control
@@ -38,12 +43,14 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 ## 📋 Commands
 
 ### Warp Commands
+
 - `/warp <name>` - Teleport to a warp
 - `/setwarp <name>` - Set a warp at current location
 - `/delwarp <name>` - Delete a warp
 - `/warps` - List all available warps
 
 ### Home Commands
+
 - `/home <name>` - Teleport to a home (personal or shared)
 - `/sethome <name>` - Set a home at current location
 - `/delhome <name>` - Delete a personal home
@@ -51,12 +58,14 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - `/sharehome <add|remove> <player> <home>` - Manage home sharing
 
 ### Admin Commands
+
 - `/warputil reload` - Reload configuration
 - `/warputil info` - Show plugin information
 
 ## 🔐 Permissions
 
 ### Warp Permissions
+
 - `nestedwarps.warp` - Use warp commands
 - `nestedwarps.warp.*` - Access all warps
 - `nestedwarps.warp.<warp_name>` - Access specific warp
@@ -67,6 +76,7 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - `nestedwarps.bypass.regions` - Bypass region protection
 
 ### Home Permissions
+
 - `nestedhomes.home` - Use home commands
 - `nestedhomes.sethome` - Set homes
 - `nestedhomes.delhome` - Delete homes
@@ -75,6 +85,7 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 - `nestedhomes.crossworld` - Cross-world home teleportation
 
 ### Admin Permissions
+
 - `nestedwarps.admin` - Access admin commands
 
 ## ⚙️ Configuration
@@ -82,6 +93,7 @@ A high-performance, feature-rich Minecraft plugin for managing nested warps and 
 The plugin includes extensive configuration options in `config.yml`:
 
 ### General Settings
+
 ```yaml
 general:
   debug: false
@@ -90,6 +102,7 @@ general:
 ```
 
 ### Teleport Settings
+
 ```yaml
 teleport:
   delay: 3                    # Teleport delay in seconds
@@ -101,6 +114,7 @@ teleport:
 ```
 
 ### Economy Settings
+
 ```yaml
 economy:
   enabled: false              # Enable economy integration
@@ -113,6 +127,7 @@ economy:
 ```
 
 ### Effects Settings
+
 ```yaml
 effects:
   enabled: true              # Enable effects
@@ -125,6 +140,7 @@ effects:
 ```
 
 ### Safety Settings
+
 ```yaml
 safety:
   check-safe-location: true   # Check for safe locations
@@ -149,12 +165,14 @@ messages:
 ## 🔌 Integrations
 
 ### Supported Plugins
+
 - **Vault**: Economy integration
 - **WorldGuard**: Region protection
 - **WorldEdit**: Selection-based teleportation
 - **PlaceholderAPI**: Placeholder support
 
 ### Integration Configuration
+
 ```yaml
 integrations:
   worldguard:
@@ -198,30 +216,34 @@ integrations:
 ## 🔧 Development
 
 ### Building from Source
+
 ```bash
 mvn clean package
 ```
 
 ### Project Structure
+
 ```
 src/main/java/net/Alexxiconify/warputil/
 ├── NestedWarpsPlugin.java      # Main plugin class
 ├── ConfigurationManager.java    # Configuration management
-├── MessageManager.java         # Message handling
+├── MessageManager.java         # Message handling (Adventure API)
 ├── EconomyManager.java         # Economy integration
 ├── SafetyManager.java          # Safety checks
-└── EffectsManager.java         # Visual/audio effects
+└── EffectsManager.java         # Visual/audio effects (Particle API)
 ```
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
+
 1. **Economy not working**: Ensure Vault is installed and economy plugin is loaded
 2. **Permissions not working**: Check permission nodes and group configurations
 3. **Cross-world teleports failing**: Verify cross-world permissions are set
 4. **Effects not showing**: Check if effects are enabled in config
 
 ### Debug Mode
+
 Enable debug mode in config to get detailed logging:
 ```yaml
 general:
@@ -230,17 +252,20 @@ general:
 
 ## 📈 Changelog
 
-### v2.0.0 (Current)
+### v1.0.0 (Current)
+
 - ✨ Complete rewrite with modular architecture
 - 🛡️ Added comprehensive safety features
 - 💰 Economy integration with Vault
-- 🎨 Visual and audio effects system
+- 🎨 Visual and audio effects system (Particle API)
 - ⚙️ Extensive configuration options
-- 🔧 Message customization system
+- 🔧 Message customization system (Adventure API)
 - 🚀 Performance optimizations
 - 🔌 Plugin integration support
+- 🔧 Modern API usage (no deprecated methods)
 
-### v1.0.0 (Previous)
+### v0.1.0 (Previous)
+
 - Basic warp and home functionality
 - Nested path support
 - Home sharing system
@@ -248,7 +273,6 @@ general:
 ## 🤝 Support
 
 - **Issues**: Create an issue on the project repository
-- **Discord**: Join our Discord server for support
 - **Documentation**: Check the wiki for detailed guides
 
 ## 📄 License
@@ -260,4 +284,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Bukkit/Spigot team for the excellent API
 - Vault team for economy integration
 - WorldGuard team for region protection
+- Adventure API team for modern text handling
 - All contributors and testers
