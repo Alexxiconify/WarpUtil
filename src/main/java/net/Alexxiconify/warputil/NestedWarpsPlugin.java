@@ -1,4 +1,3 @@
-// Main plugin class: NestedWarpsPlugin.java
 package net.Alexxiconify.warputil;
 
 import org.bukkit.Bukkit;
@@ -13,29 +12,13 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandMap;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.Effect;
-import org.bukkit.Sound;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Arrays;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("ALL")
 public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
@@ -138,7 +121,7 @@ public class NestedWarpsPlugin extends org.bukkit.plugin.java.JavaPlugin {
     }
    };
    cmd.setPermission(permission);
-   cmd.setPermissionMessage(ChatColor.RED + "You do not have permission to use this command.");
+   cmd.setPermissionMessage(messageManager.getMessage("no-permission"));
    commandMap.register("nestedwarps", cmd);
   }
 
